@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, desktopCapturer } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -119,6 +119,26 @@ function createWindow() {
 
   ipcMain.handle('delete-store-value', (event, key) => {
     store.delete(key);
+  });
+
+  // Screen capture handler
+  ipcMain.handle('get-screen-sources', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 1920, height: 1080 }
+      });
+
+      // Convert NativeImage to data URL for each source
+      return sources.map(source => ({
+        id: source.id,
+        name: source.name,
+        thumbnail: source.thumbnail.toDataURL()
+      }));
+    } catch (error) {
+      console.error('Error getting screen sources:', error);
+      throw error;
+    }
   });
 
   // Chatbox IPC handlers

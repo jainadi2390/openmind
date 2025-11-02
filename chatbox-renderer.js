@@ -262,8 +262,8 @@ async function captureScreen() {
     // Use the first screen source (primary display)
     const primaryScreen = sources[0];
 
-    // Get the thumbnail as a data URL
-    const thumbnailDataUrl = primaryScreen.thumbnail.toDataURL();
+    // The thumbnail is already a data URL string from the main process
+    const thumbnailDataUrl = primaryScreen.thumbnail;
 
     // Convert data URL to base64 (remove the data:image/png;base64, prefix)
     const base64Image = thumbnailDataUrl.split(',')[1];
