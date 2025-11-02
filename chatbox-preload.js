@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, desktopCapturer } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose protected methods for the chatbox window
 contextBridge.exposeInMainWorld('chatboxAPI', {
@@ -10,14 +10,8 @@ contextBridge.exposeInMainWorld('chatboxAPI', {
   getStoreValue: (key) => ipcRenderer.invoke('get-store-value', key),
   setStoreValue: (key, value) => ipcRenderer.invoke('set-store-value', key, value),
 
-  // Screen capture
-  getScreenSources: async () => {
-    const sources = await desktopCapturer.getSources({
-      types: ['screen'],
-      thumbnailSize: { width: 1920, height: 1080 }
-    });
-    return sources;
-  },
+  // Screen capture - request from main process via IPC
+  getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
 
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback)
