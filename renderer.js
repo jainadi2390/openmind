@@ -1,7 +1,24 @@
-// OpenMind AI Assistant - Renderer Process
-// This handles all UI interactions and AI functionality
+/**
+ * OpenMind AI Assistant - Renderer Process
+ * This handles all UI interactions and AI functionality
+ * @module renderer
+ */
 
-// State Management
+/**
+ * Application state object
+ * @typedef {Object} AppState
+ * @property {boolean} isRecording - Whether recording is active
+ * @property {boolean} isTranscribing - Whether AI is processing
+ * @property {string} currentTranscript - Current transcript text
+ * @property {Array} conversationHistory - History of user/AI exchanges
+ * @property {string|null} geminiApiKey - User's Gemini API key
+ * @property {string} selectedModel - Selected Gemini model
+ * @property {string} systemPrompt - System prompt for AI
+ * @property {string} context - User-provided context
+ * @property {Object|null} recognition - Web Speech API instance
+ * @property {Date|null} meetingStartTime - When recording started
+ * @property {boolean} alwaysOnTop - Window always-on-top state
+ */
 const state = {
   isRecording: false,
   isTranscribing: false,
@@ -16,7 +33,12 @@ const state = {
   alwaysOnTop: false
 };
 
-// Initialize the application
+/**
+ * Initialize the application
+ * Loads settings, sets up navigation, recording, and event listeners
+ * @async
+ * @returns {Promise<void>}
+ */
 async function init() {
   await loadSettings();
   setupNavigation();
@@ -27,7 +49,12 @@ async function init() {
   checkApiKey();
 }
 
-// Update greeting based on time of day
+/**
+ * Update greeting based on time of day
+ * Shows "Good morning", "Good afternoon", or "Good evening"
+ * Updates every minute
+ * @returns {void}
+ */
 function updateGreeting() {
   const greetingElement = document.getElementById('greeting-text');
   if (!greetingElement) return;
@@ -49,7 +76,12 @@ function updateGreeting() {
   setTimeout(updateGreeting, 60000);
 }
 
-// Load settings from storage
+/**
+ * Load settings from storage
+ * Retrieves API key, model, prompts, and preferences from electron-store
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadSettings() {
   try {
     const apiKey = await window.electronAPI.getStoreValue('geminiApiKey');
@@ -101,7 +133,11 @@ async function loadSettings() {
   }
 }
 
-// Navigation
+/**
+ * Setup navigation between views
+ * Handles clicks on navigation items and switches between Assistant, History, Settings
+ * @returns {void}
+ */
 function setupNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
@@ -121,7 +157,11 @@ function setupNavigation() {
   });
 }
 
-// Recording and Transcription
+/**
+ * Setup recording and transcription
+ * Initializes Web Speech API and sets up event handlers for voice recognition
+ * @returns {void}
+ */
 function setupRecording() {
   const recordBtn = document.getElementById('record-btn');
   const transcriptContent = document.getElementById('transcript-content');
@@ -220,6 +260,10 @@ function setupRecording() {
   });
 }
 
+/**
+ * Toggle recording on/off
+ * @returns {void}
+ */
 function toggleRecording() {
   if (state.isRecording) {
     stopRecording();
@@ -228,6 +272,11 @@ function toggleRecording() {
   }
 }
 
+/**
+ * Start recording audio and transcription
+ * Checks for API key before starting
+ * @returns {void}
+ */
 function startRecording() {
   if (!state.geminiApiKey) {
     alert('Please enter your Gemini API key in Settings first.');
@@ -247,6 +296,10 @@ function startRecording() {
   }
 }
 
+/**
+ * Stop recording and save meeting to history
+ * @returns {void}
+ */
 function stopRecording() {
   if (state.recognition && state.isRecording) {
     state.isRecording = false;
@@ -330,7 +383,12 @@ function addTranscriptItem(text) {
   transcriptContent.scrollTop = transcriptContent.scrollHeight;
 }
 
-// AI Integration
+/**
+ * Get AI suggestion for transcribed text
+ * @async
+ * @param {string} text - The transcribed text to analyze
+ * @returns {Promise<void>}
+ */
 async function getAISuggestion(text) {
   if (state.isTranscribing || !state.geminiApiKey) {
     return;
@@ -360,6 +418,13 @@ async function getAISuggestion(text) {
   }
 }
 
+/**
+ * Call Gemini API with user message and context
+ * @async
+ * @param {string} userMessage - The user's message or question
+ * @returns {Promise<string>} The AI's response text
+ * @throws {Error} If API call fails
+ */
 async function callGeminiAPI(userMessage) {
   const apiKey = state.geminiApiKey;
   let model = state.selectedModel;

@@ -1,6 +1,18 @@
-// Chatbox Renderer - Handles chat functionality
+/**
+ * Chatbox Renderer - Handles chat functionality
+ * @module chatbox-renderer
+ */
 
-// State
+/**
+ * Chat state object
+ * @typedef {Object} ChatState
+ * @property {Array} messages - Array of chat messages
+ * @property {boolean} isWaiting - Whether waiting for AI response
+ * @property {string|null} geminiApiKey - User's Gemini API key
+ * @property {string} selectedModel - Selected Gemini model
+ * @property {string} systemPrompt - System prompt for AI
+ * @property {string} context - User-provided context
+ */
 const chatState = {
   messages: [],
   isWaiting: false,
@@ -22,7 +34,12 @@ const emptyState = document.getElementById('empty-state');
 const warningBanner = document.getElementById('warning-banner');
 const quickActions = document.querySelectorAll('.quick-action');
 
-// Initialize
+/**
+ * Initialize chatbox
+ * Loads settings, sets up event listeners, checks invisible mode, and loads history
+ * @async
+ * @returns {Promise<void>}
+ */
 async function init() {
   await loadSettings();
   setupEventListeners();
@@ -30,7 +47,12 @@ async function init() {
   loadChatHistory();
 }
 
-// Load settings
+/**
+ * Load settings from storage
+ * Retrieves API key, model, and prompts
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadSettings() {
   try {
     chatState.geminiApiKey = await window.chatboxAPI.getStoreValue('geminiApiKey');
@@ -113,7 +135,12 @@ function setupEventListeners() {
   captureBtn.addEventListener('click', captureScreen);
 }
 
-// Send message
+/**
+ * Send user message to AI
+ * Validates API key, shows typing indicator, calls Gemini API
+ * @async
+ * @returns {Promise<void>}
+ */
 async function sendMessage() {
   const message = chatInput.value.trim();
   if (!message || chatState.isWaiting) return;
@@ -152,7 +179,15 @@ async function sendMessage() {
   }
 }
 
-// Call Gemini API
+/**
+ * Call Gemini API with user message and optional image
+ * Supports text-only and multimodal (vision) requests
+ * @async
+ * @param {string} userMessage - The user's message or question
+ * @param {string|null} imageData - Optional base64 image data for vision
+ * @returns {Promise<string>} The AI's response text
+ * @throws {Error} If API call fails
+ */
 async function callGeminiAPI(userMessage, imageData = null) {
   const apiKey = chatState.geminiApiKey;
   let model = chatState.selectedModel;
@@ -241,7 +276,13 @@ async function callGeminiAPI(userMessage, imageData = null) {
   return data.candidates[0].content.parts[0].text;
 }
 
-// Capture screen and ask AI
+/**
+ * Capture screen and send to AI for analysis
+ * Uses Electron desktopCapturer via IPC to get screenshot
+ * Sends image to Gemini Vision API with user's question
+ * @async
+ * @returns {Promise<void>}
+ */
 async function captureScreen() {
   if (chatState.isWaiting) return;
 

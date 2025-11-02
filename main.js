@@ -1,3 +1,9 @@
+/**
+ * OpenMind AI Assistant - Main Process
+ * Handles window management, IPC, and system integration
+ * @module main
+ */
+
 const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, desktopCapturer } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
@@ -7,6 +13,11 @@ let mainWindow;
 let chatboxWindow;
 let tray;
 
+/**
+ * Create main application window
+ * Sets up window configuration, menus, and IPC handlers
+ * @returns {void}
+ */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
@@ -175,6 +186,12 @@ function createWindow() {
   });
 }
 
+/**
+ * Create floating chatbox window
+ * Creates transparent, always-on-top chat assistant window
+ * Respects user's invisible mode preference
+ * @returns {void}
+ */
 function createChatboxWindow() {
   if (chatboxWindow) {
     chatboxWindow.show();
@@ -218,6 +235,12 @@ function createChatboxWindow() {
   });
 }
 
+/**
+ * Update chatbox visibility settings
+ * Applies invisible mode settings (skipTaskbar, contentProtection)
+ * Recreates window if necessary
+ * @returns {void}
+ */
 function updateChatboxVisibility() {
   if (!chatboxWindow) return;
 
