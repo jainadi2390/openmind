@@ -273,21 +273,28 @@ function updateRecordButton() {
 }
 
 function updateStatusBadge(status) {
-  const badge = document.getElementById('status-badge');
-  badge.className = 'status-badge';
+  // Update both status badges (nav and view header)
+  const navBadge = document.getElementById('nav-status-badge');
+  const viewBadge = document.getElementById('view-status-badge');
 
-  switch (status) {
-    case 'recording':
-      badge.classList.add('recording');
-      badge.textContent = 'Recording';
-      break;
-    case 'ready':
-      badge.classList.add('ready');
-      badge.textContent = 'Ready';
-      break;
-    default:
-      badge.textContent = 'Ready';
-  }
+  const badges = [navBadge, viewBadge].filter(badge => badge !== null);
+
+  badges.forEach(badge => {
+    badge.className = 'status-badge';
+
+    switch (status) {
+      case 'recording':
+        badge.classList.add('recording');
+        badge.textContent = 'Recording';
+        break;
+      case 'ready':
+        badge.classList.add('ready');
+        badge.textContent = 'Ready';
+        break;
+      default:
+        badge.textContent = 'Ready';
+    }
+  });
 }
 
 function addTranscriptItem(text) {
