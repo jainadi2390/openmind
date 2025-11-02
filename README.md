@@ -17,6 +17,7 @@ OpenMind is a **transparent, ethical AI meeting assistant** designed to help pro
 ### Key Features
 
 - 🎙️ **Real-time Audio Transcription** - Live speech-to-text using Web Speech API
+- 💬 **Floating Chat Assistant** - Always-on-top chatbox for instant AI help
 - 🤖 **AI-Powered Suggestions** - Context-aware responses using Google Gemini AI
 - 📝 **Meeting Summaries** - Automatic post-meeting summaries and action items
 - 💾 **Conversation History** - Searchable history of all your meetings
@@ -24,6 +25,7 @@ OpenMind is a **transparent, ethical AI meeting assistant** designed to help pro
 - 🔒 **Privacy First** - All data stored locally, API key encrypted
 - 🌍 **Multi-language Support** - Transcribe in 10+ languages
 - ⌨️ **Keyboard Shortcuts** - Quick access without mouse
+- 🎛️ **Optional Invisible Mode** - Configurable screen-sharing visibility (use ethically!)
 
 ## 🎯 Use Cases
 
@@ -137,12 +139,65 @@ The built application will be in the `dist` folder.
    - Meeting is automatically saved to History
    - View summary and transcript in History tab
 
+### Using the Floating Chat Assistant
+
+The floating chat assistant is a powerful feature that gives you instant access to AI help:
+
+1. **Open the Chatbox**
+   - Click "Chat Assistant" button in the header, or
+   - Press `Ctrl+Shift+C` (global shortcut)
+
+2. **Chat with AI**
+   - Type your question in the input box
+   - Press Enter or click Send
+   - Get instant AI responses based on your configured context
+
+3. **Quick Actions**
+   - Use quick action buttons for common tasks
+   - "Summarize" - Get a quick summary
+   - "Key points" - Extract key discussion points
+   - "Suggest response" - Get AI-suggested answers
+   - "Clear" - Clear chat history
+
+4. **Window Controls**
+   - The chatbox floats above all windows (always-on-top)
+   - Drag the titlebar to reposition
+   - Click X to close, - to minimize
+   - Resize by dragging the edges
+
+### Optional: Invisible Mode
+
+⚠️ **Use Responsibly!** OpenMind includes an **optional** invisible mode feature:
+
+**What it does:**
+- Hides the chatbox from screen sharing/recording software
+- Removes the chatbox from the taskbar
+- Makes it only visible to you on your physical screen
+
+**How to enable:**
+1. Go to Settings > Floating Chat Assistant
+2. Check "Hide chatbox from screen sharing (Invisible Mode)"
+3. Read and acknowledge the ethical use warning
+4. Click "Apply Visibility Settings"
+5. **IMPORTANT:** You will be shown a warning - read it carefully!
+
+**Ethical Requirements:**
+- ✅ **DO:** Disclose to meeting participants that you're using AI assistance
+- ✅ **DO:** Use for preparation and note-taking with transparency
+- ✅ **DO:** Respect privacy laws and company policies
+- ❌ **DON'T:** Use deceptively in job interviews
+- ❌ **DON'T:** Use to cheat on assessments
+- ❌ **DON'T:** Misrepresent your abilities
+
+**Default Setting:** Invisible mode is **disabled by default**. You have full control.
+
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+Shift+M` | Show/Hide window |
+| `Ctrl+Shift+M` | Show/Hide main window |
 | `Ctrl+Shift+R` | Start/Stop recording |
+| `Ctrl+Shift+C` | Toggle chat assistant |
 | `Ctrl+K` | Toggle compact mode |
 | `Ctrl+,` | Open settings |
 

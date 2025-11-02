@@ -63,6 +63,12 @@
             <span class="status-badge" id="status-badge">Ready</span>
           </div>
           <div class="header-right">
+            <button class="btn btn-sm" id="open-chatbox-btn" title="Open AI Chat Assistant (Ctrl+Shift+C)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              <span>Chat Assistant</span>
+            </button>
             <button class="btn btn-icon" id="always-on-top-btn" title="Toggle Always on Top">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M5 3l14 9-14 9V3z"/>
@@ -232,6 +238,37 @@
           </div>
 
           <div class="settings-section">
+            <h3>Floating Chat Assistant</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="hide-from-screen-share-checkbox" />
+                <span>Hide chatbox from screen sharing (Invisible Mode)</span>
+              </label>
+              <p class="help-text" style="margin-left: 28px; color: #fca5a5;">
+                ⚠️ <strong>Warning:</strong> Enabling this feature hides the chatbox during screen sharing.
+                This should only be used with full disclosure to meeting participants. Using this deceptively
+                may violate company policies, academic integrity rules, or even laws.
+              </p>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" id="apply-visibility-settings-btn">Apply Visibility Settings</button>
+            </div>
+            <div class="transparency-notice" style="background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <p>
+                <strong>Ethical Use Requirement:</strong> The "Invisible Mode" feature is provided
+                with the understanding that you will use it responsibly. Always disclose your use of
+                AI assistance to meeting participants. Deceptive use is unethical and may have legal
+                consequences.
+              </p>
+            </div>
+          </div>
+
+          <div class="settings-section">
             <h3>Shortcuts</h3>
             <div class="shortcut-list">
               <div class="shortcut-item">
@@ -245,6 +282,10 @@
               <div class="shortcut-item">
                 <span class="shortcut-label">Compact Mode</span>
                 <kbd>Ctrl+K</kbd>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-label">Toggle Chat Assistant</span>
+                <kbd>Ctrl+Shift+C</kbd>
               </div>
             </div>
           </div>

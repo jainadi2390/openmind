@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAlwaysOnTop: (value) => ipcRenderer.send('set-always-on-top', value),
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
 
+  // Chatbox controls
+  openChatbox: () => ipcRenderer.send('open-chatbox'),
+  closeChatbox: () => ipcRenderer.send('close-chatbox'),
+  toggleChatbox: () => ipcRenderer.send('toggle-chatbox'),
+  updateChatboxVisibility: () => ipcRenderer.send('update-chatbox-visibility'),
+
   // Storage
   getStoreValue: (key) => ipcRenderer.invoke('get-store-value', key),
   setStoreValue: (key, value) => ipcRenderer.invoke('set-store-value', key, value),

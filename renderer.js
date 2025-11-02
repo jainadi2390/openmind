@@ -584,10 +584,66 @@ function setupSettings() {
       console.error('Error saving context:', error);
     }
   });
+
+  // Chatbox visibility settings
+  const hideFromScreenShareCheckbox = document.getElementById('hide-from-screen-share-checkbox');
+  const applyVisibilityBtn = document.getElementById('apply-visibility-settings-btn');
+
+  // Load current setting
+  window.electronAPI.getStoreValue('hideFromScreenShare').then(value => {
+    if (hideFromScreenShareCheckbox) {
+      hideFromScreenShareCheckbox.checked = value || false;
+    }
+  });
+
+  if (applyVisibilityBtn) {
+    applyVisibilityBtn.addEventListener('click', async () => {
+      const hideFromScreenShare = hideFromScreenShareCheckbox.checked;
+
+      if (hideFromScreenShare) {
+        const confirmed = confirm(
+          '⚠️ WARNING: You are about to enable Invisible Mode.\n\n' +
+          'This will hide the chat assistant from screen sharing.\n\n' +
+          'IMPORTANT:\n' +
+          '• Only use this with full disclosure to meeting participants\n' +
+          '• Deceptive use may violate policies or laws\n' +
+          '• You are responsible for ethical use\n\n' +
+          'Do you understand and agree to use this feature ethically?'
+        );
+
+        if (!confirmed) {
+          hideFromScreenShareCheckbox.checked = false;
+          return;
+        }
+      }
+
+      try {
+        await window.electronAPI.setStoreValue('hideFromScreenShare', hideFromScreenShare);
+        window.electronAPI.updateChatboxVisibility();
+
+        alert(
+          hideFromScreenShare
+            ? '⚠️ Invisible Mode enabled. The chatbox will be hidden from screen sharing.\n\nPlease use ethically!'
+            : 'Invisible Mode disabled. The chatbox will be visible normally.'
+        );
+      } catch (error) {
+        console.error('Error applying visibility settings:', error);
+        alert('Failed to apply visibility settings');
+      }
+    });
+  }
 }
 
 // Event Listeners
 function setupEventListeners() {
+  // Open chatbox
+  const openChatboxBtn = document.getElementById('open-chatbox-btn');
+  if (openChatboxBtn) {
+    openChatboxBtn.addEventListener('click', () => {
+      window.electronAPI.openChatbox();
+    });
+  }
+
   // Always on top toggle
   const alwaysOnTopBtn = document.getElementById('always-on-top-btn');
   alwaysOnTopBtn.addEventListener('click', () => {

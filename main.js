@@ -4,6 +4,7 @@ const Store = require('electron-store');
 
 const store = new Store();
 let mainWindow;
+let chatboxWindow;
 let tray;
 
 function createWindow() {
@@ -120,9 +121,101 @@ function createWindow() {
     store.delete(key);
   });
 
+  // Chatbox IPC handlers
+  ipcMain.on('open-chatbox', () => {
+    createChatboxWindow();
+  });
+
+  ipcMain.on('close-chatbox', () => {
+    if (chatboxWindow) {
+      chatboxWindow.close();
+    }
+  });
+
+  ipcMain.on('toggle-chatbox', () => {
+    if (chatboxWindow && chatboxWindow.isVisible()) {
+      chatboxWindow.close();
+    } else {
+      createChatboxWindow();
+    }
+  });
+
+  ipcMain.on('update-chatbox-visibility', () => {
+    updateChatboxVisibility();
+  });
+
+  ipcMain.on('minimize-chatbox', () => {
+    if (chatboxWindow) {
+      chatboxWindow.minimize();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+function createChatboxWindow() {
+  if (chatboxWindow) {
+    chatboxWindow.show();
+    chatboxWindow.focus();
+    return;
+  }
+
+  // Get user's visibility preference
+  const hideFromScreenShare = store.get('hideFromScreenShare', false);
+
+  chatboxWindow = new BrowserWindow({
+    width: 400,
+    height: 600,
+    minWidth: 300,
+    minHeight: 400,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: hideFromScreenShare, // Hide from taskbar if user enabled invisible mode
+    hasShadow: !hideFromScreenShare,
+    resizable: true,
+    maximizable: false,
+    title: 'OpenMind Chat',
+    webPreferences: {
+      preload: path.join(__dirname, 'chatbox-preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false
+    }
+  });
+
+  // Set content protection if user wants to hide from screen sharing
+  if (hideFromScreenShare) {
+    chatboxWindow.setContentProtection(true);
+  }
+
+  chatboxWindow.loadFile('chatbox.html');
+
+  chatboxWindow.on('closed', () => {
+    chatboxWindow = null;
+  });
+}
+
+function updateChatboxVisibility() {
+  if (!chatboxWindow) return;
+
+  const hideFromScreenShare = store.get('hideFromScreenShare', false);
+
+  chatboxWindow.setSkipTaskbar(hideFromScreenShare);
+  chatboxWindow.setContentProtection(hideFromScreenShare);
+  chatboxWindow.setHasShadow(!hideFromScreenShare);
+
+  // Recreate window if major changes are needed
+  if (chatboxWindow) {
+    const wasClosed = !chatboxWindow.isVisible();
+    chatboxWindow.close();
+    chatboxWindow = null;
+    if (!wasClosed) {
+      setTimeout(() => createChatboxWindow(), 100);
+    }
+  }
 }
 
 function createTray() {
@@ -172,6 +265,14 @@ app.whenReady().then(() => {
   globalShortcut.register('CmdOrCtrl+Shift+R', () => {
     if (mainWindow) {
       mainWindow.webContents.send('toggle-recording');
+    }
+  });
+
+  globalShortcut.register('CmdOrCtrl+Shift+C', () => {
+    if (chatboxWindow && chatboxWindow.isVisible()) {
+      chatboxWindow.close();
+    } else {
+      createChatboxWindow();
     }
   });
 });
