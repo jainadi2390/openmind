@@ -12,14 +12,18 @@
  * @property {string} selectedModel - Selected Gemini model
  * @property {string} systemPrompt - System prompt for AI
  * @property {string} context - User-provided context
+ * @property {string|null} capturedScreenData - Base64 image data of captured screen
+ * @property {boolean} screenCaptureMode - Whether in screen capture mode
  */
 const chatState = {
   messages: [],
   isWaiting: false,
   geminiApiKey: null,
-  selectedModel: 'gemini-2.0-flash-exp',
+  selectedModel: 'gemini-1.5-pro', // Using Pro model for better quality
   systemPrompt: '',
-  context: ''
+  context: '',
+  capturedScreenData: null,
+  screenCaptureMode: false
 };
 
 // DOM Elements
@@ -138,6 +142,7 @@ function setupEventListeners() {
 /**
  * Send user message to AI
  * Validates API key, shows typing indicator, calls Gemini API
+ * Includes captured screen if in screen capture mode
  * @async
  * @returns {Promise<void>}
  */
@@ -154,20 +159,32 @@ async function sendMessage() {
   chatInput.value = '';
   chatInput.style.height = 'auto';
 
-  // Add user message
-  addMessage('user', message);
+  // Check if we have a captured screen
+  const hasScreen = chatState.screenCaptureMode && chatState.capturedScreenData;
+
+  // Add user message with screen indicator if applicable
+  addMessage('user', hasScreen ? `📷 ${message}` : message);
 
   // Show typing indicator
   showTyping(true);
   chatState.isWaiting = true;
   sendBtn.disabled = true;
+  captureBtn.disabled = true;
 
   try {
-    // Call Gemini API
-    const response = await callGeminiAPI(message);
+    // Call Gemini API with or without image
+    const response = await callGeminiAPI(
+      message,
+      hasScreen ? chatState.capturedScreenData : null
+    );
 
     // Add assistant response
     addMessage('assistant', response);
+
+    // Clear captured screen after using it
+    if (hasScreen) {
+      clearCapturedScreen();
+    }
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     addSystemMessage('Error: ' + error.message);
@@ -175,6 +192,7 @@ async function sendMessage() {
     showTyping(false);
     chatState.isWaiting = false;
     sendBtn.disabled = false;
+    captureBtn.disabled = false;
     chatInput.focus();
   }
 }
@@ -194,25 +212,42 @@ async function callGeminiAPI(userMessage, imageData = null) {
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
 
-  // Map old model names to new ones
+  // Map old model names to new ones and enforce Pro model for better quality
   const modelMapping = {
-    'gemini-pro': 'gemini-1.5-flash',
-    'gemini-1.0-pro': 'gemini-1.5-flash'
+    'gemini-pro': 'gemini-1.5-pro',
+    'gemini-1.0-pro': 'gemini-1.5-pro',
+    'gemini-1.5-flash': 'gemini-1.5-pro', // Upgrade flash to pro for better quality
+    'gemini-2.0-flash-exp': 'gemini-1.5-pro' // Use pro instead of experimental
   };
 
   if (modelMapping[model]) {
     model = modelMapping[model];
-    // Update stored model
     chatState.selectedModel = model;
     await window.chatboxAPI.setStoreValue('model', model);
   }
 
-  // Use flash or pro models for vision (they support multimodal)
-  // Experimental models also support vision
+  // Ensure we're using Pro model for vision tasks
+  if (imageData && !model.includes('pro')) {
+    model = 'gemini-1.5-pro';
+  }
+
+  // Use v1beta for all models (supports vision)
   const apiVersion = 'v1beta';
 
-  // Build conversation context
+  // Build conversation context with specialized prompt for screen analysis
   let systemContext = systemPrompt;
+
+  // Add screen analysis context if image is provided
+  if (imageData) {
+    systemContext += `\n\nYou are helping a user analyze content on their screen. `;
+    systemContext += `The user has captured their screen and will ask you specific questions about it. `;
+    systemContext += `Focus on answering their specific question accurately and directly. `;
+    systemContext += `Do NOT describe the entire screen unless asked. `;
+    systemContext += `If they ask to solve a problem, provide step-by-step solution. `;
+    systemContext += `If they ask about specific content, focus only on that content. `;
+    systemContext += `Be precise, helpful, and task-oriented.`;
+  }
+
   if (context) {
     systemContext += `\n\nAdditional Context:\n${context}`;
   }
@@ -223,7 +258,9 @@ async function callGeminiAPI(userMessage, imageData = null) {
 
   recentMessages.forEach(msg => {
     if (msg.role === 'user' || msg.role === 'assistant') {
-      conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+      // Strip emoji indicators from history to keep it clean
+      const cleanContent = msg.content.replace(/^📷\s*/, '');
+      conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${cleanContent}\n`;
     }
   });
 
@@ -277,9 +314,9 @@ async function callGeminiAPI(userMessage, imageData = null) {
 }
 
 /**
- * Capture screen and send to AI for analysis
- * Uses Electron desktopCapturer via IPC to get screenshot
- * Sends image to Gemini Vision API with user's question
+ * Capture screen and enter "Use Screen" mode
+ * Stores screenshot for use with next user message
+ * Does not automatically send - waits for user to type their question
  * @async
  * @returns {Promise<void>}
  */
@@ -292,6 +329,12 @@ async function captureScreen() {
   }
 
   try {
+    // If already in screen capture mode, clear it
+    if (chatState.screenCaptureMode) {
+      clearCapturedScreen();
+      return;
+    }
+
     // Get screen sources
     const sources = await window.chatboxAPI.getScreenSources();
 
@@ -309,40 +352,49 @@ async function captureScreen() {
     // Convert data URL to base64 (remove the data:image/png;base64, prefix)
     const base64Image = thumbnailDataUrl.split(',')[1];
 
-    // Get user's question or use default
-    let question = chatInput.value.trim();
-    if (!question) {
-      question = "What do you see on this screen? Please describe what's visible and provide any relevant insights.";
-    }
+    // Store the captured screen
+    chatState.capturedScreenData = base64Image;
+    chatState.screenCaptureMode = true;
 
-    // Clear input
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
+    // Update UI to show screen is captured
+    updateCaptureButtonState(true);
+    chatInput.placeholder = '📷 Screen captured! Ask me anything about what you see...';
+    chatInput.focus();
 
-    // Add user message with image indicator
-    addMessage('user', `📷 ${question}`);
-
-    // Show typing indicator
-    showTyping(true);
-    chatState.isWaiting = true;
-    sendBtn.disabled = true;
-    captureBtn.disabled = true;
-
-    // Call Gemini API with image
-    const response = await callGeminiAPI(question, base64Image);
-
-    // Add assistant response
-    addMessage('assistant', response);
+    // Show feedback message
+    addSystemMessage('📷 Screen captured! Now type your question about what you see on screen.');
 
   } catch (error) {
     console.error('Error capturing screen:', error);
     addSystemMessage('Error capturing screen: ' + error.message);
-  } finally {
-    showTyping(false);
-    chatState.isWaiting = false;
-    sendBtn.disabled = false;
-    captureBtn.disabled = false;
-    chatInput.focus();
+  }
+}
+
+/**
+ * Clear captured screen and exit screen capture mode
+ * @returns {void}
+ */
+function clearCapturedScreen() {
+  chatState.capturedScreenData = null;
+  chatState.screenCaptureMode = false;
+  updateCaptureButtonState(false);
+  chatInput.placeholder = 'Ask me anything or capture screen...';
+}
+
+/**
+ * Update capture button visual state
+ * @param {boolean} isActive - Whether screen capture mode is active
+ * @returns {void}
+ */
+function updateCaptureButtonState(isActive) {
+  if (isActive) {
+    captureBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    captureBtn.style.boxShadow = '0 0 15px rgba(102, 126, 234, 0.6)';
+    captureBtn.title = 'Clear captured screen';
+  } else {
+    captureBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+    captureBtn.style.boxShadow = 'none';
+    captureBtn.title = 'Capture Screen (Ask AI about what\'s on screen)';
   }
 }
 
