@@ -5,7 +5,7 @@ const chatState = {
   messages: [],
   isWaiting: false,
   geminiApiKey: null,
-  selectedModel: 'gemini-1.5-flash',
+  selectedModel: 'gemini-2.0-flash-exp',
   systemPrompt: '',
   context: ''
 };
@@ -33,7 +33,21 @@ async function init() {
 async function loadSettings() {
   try {
     chatState.geminiApiKey = await window.chatboxAPI.getStoreValue('geminiApiKey');
-    chatState.selectedModel = await window.chatboxAPI.getStoreValue('model') || 'gemini-1.5-flash';
+    let model = await window.chatboxAPI.getStoreValue('model') || 'gemini-2.0-flash-exp';
+
+    // Map old model names to new ones
+    const modelMapping = {
+      'gemini-pro': 'gemini-1.5-flash',
+      'gemini-1.0-pro': 'gemini-1.5-flash'
+    };
+
+    if (modelMapping[model]) {
+      model = modelMapping[model];
+      // Update stored model
+      await window.chatboxAPI.setStoreValue('model', model);
+    }
+
+    chatState.selectedModel = model;
     chatState.systemPrompt = await window.chatboxAPI.getStoreValue('systemPrompt') ||
       'You are a helpful AI assistant. Provide concise, accurate responses.';
     chatState.context = await window.chatboxAPI.getStoreValue('context') || '';
@@ -137,9 +151,26 @@ async function sendMessage() {
 // Call Gemini API
 async function callGeminiAPI(userMessage) {
   const apiKey = chatState.geminiApiKey;
-  const model = chatState.selectedModel;
+  let model = chatState.selectedModel;
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
+
+  // Map old model names to new ones
+  const modelMapping = {
+    'gemini-pro': 'gemini-1.5-flash',
+    'gemini-1.0-pro': 'gemini-1.5-flash'
+  };
+
+  if (modelMapping[model]) {
+    model = modelMapping[model];
+    // Update stored model
+    chatState.selectedModel = model;
+    await window.chatboxAPI.setStoreValue('model', model);
+  }
+
+  // Determine API version based on model
+  // Experimental models use v1beta, stable models can use v1 or v1beta
+  const apiVersion = model.includes('-exp') ? 'v1beta' : 'v1beta';
 
   // Build conversation context
   let conversationHistory = [];
@@ -162,7 +193,7 @@ async function callGeminiAPI(userMessage) {
 
   conversationText += `User: ${userMessage}\nAssistant:`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',

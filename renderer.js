@@ -8,7 +8,7 @@ const state = {
   currentTranscript: '',
   conversationHistory: [],
   geminiApiKey: null,
-  selectedModel: 'gemini-1.5-flash',
+  selectedModel: 'gemini-2.0-flash-exp',
   systemPrompt: '',
   context: '',
   recognition: null,
@@ -30,10 +30,22 @@ async function init() {
 async function loadSettings() {
   try {
     const apiKey = await window.electronAPI.getStoreValue('geminiApiKey');
-    const model = await window.electronAPI.getStoreValue('model') || 'gemini-1.5-flash';
+    let model = await window.electronAPI.getStoreValue('model') || 'gemini-2.0-flash-exp';
     const systemPrompt = await window.electronAPI.getStoreValue('systemPrompt');
     const context = await window.electronAPI.getStoreValue('context');
     const language = await window.electronAPI.getStoreValue('language') || 'en-US';
+
+    // Map old model names to new ones
+    const modelMapping = {
+      'gemini-pro': 'gemini-1.5-flash',
+      'gemini-1.0-pro': 'gemini-1.5-flash'
+    };
+
+    if (modelMapping[model]) {
+      model = modelMapping[model];
+      // Update stored model
+      await window.electronAPI.setStoreValue('model', model);
+    }
 
     state.geminiApiKey = apiKey;
     state.selectedModel = model;
@@ -320,9 +332,26 @@ async function getAISuggestion(text) {
 
 async function callGeminiAPI(userMessage) {
   const apiKey = state.geminiApiKey;
-  const model = state.selectedModel;
+  let model = state.selectedModel;
   const systemPrompt = state.systemPrompt || document.getElementById('system-prompt').value;
   const context = state.context || document.getElementById('context-input').value;
+
+  // Map old model names to new ones
+  const modelMapping = {
+    'gemini-pro': 'gemini-1.5-flash',
+    'gemini-1.0-pro': 'gemini-1.5-flash'
+  };
+
+  if (modelMapping[model]) {
+    model = modelMapping[model];
+    // Update stored model
+    state.selectedModel = model;
+    await window.electronAPI.setStoreValue('model', model);
+  }
+
+  // Determine API version based on model
+  // Experimental models use v1beta, stable models can use v1 or v1beta
+  const apiVersion = model.includes('-exp') ? 'v1beta' : 'v1beta';
 
   // Build the prompt
   let fullPrompt = systemPrompt + '\n\n';
@@ -343,7 +372,7 @@ async function callGeminiAPI(userMessage) {
 
   fullPrompt += `Current question/statement: ${userMessage}\n\nProvide a helpful, concise response:`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
