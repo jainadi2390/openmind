@@ -90,15 +90,24 @@ async function loadSettings() {
     const context = await window.electronAPI.getStoreValue('context');
     const language = await window.electronAPI.getStoreValue('language') || 'en-US';
 
-    // Map old model names to new ones
+    // Map old model names to working v1beta models
     const modelMapping = {
-      'gemini-pro': 'gemini-1.5-flash',
-      'gemini-1.0-pro': 'gemini-1.5-flash'
+      'gemini-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.0-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+      'gemini-1.5-pro': 'gemini-1.5-pro-latest'
     };
 
     if (modelMapping[model]) {
       model = modelMapping[model];
       // Update stored model
+      await window.electronAPI.setStoreValue('model', model);
+    }
+
+    // Ensure we have a valid model (fallback to 2.0-flash-exp)
+    const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    if (!validModels.includes(model)) {
+      model = 'gemini-2.0-flash-exp';
       await window.electronAPI.setStoreValue('model', model);
     }
 
@@ -431,22 +440,30 @@ async function callGeminiAPI(userMessage) {
   const systemPrompt = state.systemPrompt || document.getElementById('system-prompt').value;
   const context = state.context || document.getElementById('context-input').value;
 
-  // Map old model names to new ones
+  // Map old/incorrect model names to working v1beta models
   const modelMapping = {
-    'gemini-pro': 'gemini-1.5-flash',
-    'gemini-1.0-pro': 'gemini-1.5-flash'
+    'gemini-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.0-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+    'gemini-1.5-pro': 'gemini-1.5-pro-latest'
   };
 
+  // Apply mapping if needed
   if (modelMapping[model]) {
     model = modelMapping[model];
-    // Update stored model
     state.selectedModel = model;
     await window.electronAPI.setStoreValue('model', model);
   }
 
-  // Determine API version based on model
-  // Experimental models use v1beta, stable models can use v1 or v1beta
-  const apiVersion = model.includes('-exp') ? 'v1beta' : 'v1beta';
+  // Ensure we have a valid model (fallback to 2.0-flash-exp)
+  const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+  if (!validModels.includes(model)) {
+    model = 'gemini-2.0-flash-exp';
+    state.selectedModel = model;
+  }
+
+  // Use v1beta API version (required for these models)
+  const apiVersion = 'v1beta';
 
   // Build the prompt
   let fullPrompt = systemPrompt + '\n\n';

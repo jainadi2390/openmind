@@ -19,7 +19,7 @@ const chatState = {
   messages: [],
   isWaiting: false,
   geminiApiKey: null,
-  selectedModel: 'gemini-1.5-flash', // Flash supports vision and is reliable
+  selectedModel: 'gemini-2.0-flash-exp', // Latest Gemini 2.0 experimental model
   systemPrompt: '',
   context: '',
   capturedScreenData: null,
@@ -212,26 +212,29 @@ async function callGeminiAPI(userMessage, imageData = null) {
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
 
-  // Map old model names to new ones and select appropriate model
+  // Map old/incorrect model names to working v1beta models
   const modelMapping = {
-    'gemini-pro': 'gemini-1.5-flash',
-    'gemini-1.0-pro': 'gemini-1.5-flash',
-    'gemini-2.0-flash-exp': 'gemini-1.5-flash',
-    'gemini-1.5-pro': 'gemini-1.5-flash' // Pro not available in v1beta, use Flash
+    'gemini-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.0-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+    'gemini-1.5-pro': 'gemini-1.5-pro-latest'
   };
 
+  // Apply mapping if needed
   if (modelMapping[model]) {
     model = modelMapping[model];
     chatState.selectedModel = model;
     await window.chatboxAPI.setStoreValue('model', model);
   }
 
-  // Ensure we're using Flash model for vision (proven to work)
-  if (imageData && model !== 'gemini-1.5-flash') {
-    model = 'gemini-1.5-flash';
+  // Ensure we have a valid model (fallback to 2.0-flash-exp)
+  const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+  if (!validModels.includes(model)) {
+    model = 'gemini-2.0-flash-exp';
+    chatState.selectedModel = model;
   }
 
-  // Use v1beta API version (supports vision and multimodal)
+  // Use v1beta API version (required for these models)
   const apiVersion = 'v1beta';
 
   // Build conversation context with specialized prompt for screen analysis
