@@ -26,17 +26,35 @@ const chatState = {
   screenCaptureMode: false
 };
 
-// DOM Elements
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-const sendBtn = document.getElementById('send-btn');
-const captureBtn = document.getElementById('capture-screen-btn');
-const closeBtn = document.getElementById('close-btn');
-const minimizeBtn = document.getElementById('minimize-btn');
-const typingIndicator = document.getElementById('typing-indicator');
-const emptyState = document.getElementById('empty-state');
-const warningBanner = document.getElementById('warning-banner');
-const quickActions = document.querySelectorAll('.quick-action');
+// DOM Elements - will be initialized when DOM is ready
+let chatMessages;
+let chatInput;
+let sendBtn;
+let captureBtn;
+let closeBtn;
+let minimizeBtn;
+let typingIndicator;
+let emptyState;
+let warningBanner;
+let quickActions;
+
+/**
+ * Initialize DOM element references
+ * Must be called after DOM is ready
+ * @returns {void}
+ */
+function initDOMElements() {
+  chatMessages = document.getElementById('chat-messages');
+  chatInput = document.getElementById('chat-input');
+  sendBtn = document.getElementById('send-btn');
+  captureBtn = document.getElementById('capture-screen-btn');
+  closeBtn = document.getElementById('close-btn');
+  minimizeBtn = document.getElementById('minimize-btn');
+  typingIndicator = document.getElementById('typing-indicator');
+  emptyState = document.getElementById('empty-state');
+  warningBanner = document.getElementById('warning-banner');
+  quickActions = document.querySelectorAll('.quick-action');
+}
 
 /**
  * Initialize chatbox
@@ -45,6 +63,7 @@ const quickActions = document.querySelectorAll('.quick-action');
  * @returns {Promise<void>}
  */
 async function init() {
+  initDOMElements();
   await loadSettings();
   setupEventListeners();
   checkInvisibleMode();
@@ -290,11 +309,11 @@ async function callGeminiAPI(userMessage, imageData = null) {
   const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
 
   // Build parts array for the request
-  const parts = [{ text: conversationText }];
+  const requestParts = [{ text: conversationText }];
 
   // Add image if provided
   if (imageData) {
-    parts.push({
+    requestParts.push({
       inlineData: {
         mimeType: 'image/png',
         data: imageData
@@ -309,7 +328,7 @@ async function callGeminiAPI(userMessage, imageData = null) {
     },
     body: JSON.stringify({
       contents: [{
-        parts: parts
+        parts: requestParts
       }],
       generationConfig: {
         temperature: 0.7, // Lower temperature for more focused, accurate responses
