@@ -19,7 +19,7 @@ const chatState = {
   messages: [],
   isWaiting: false,
   geminiApiKey: null,
-  selectedModel: 'gemini-1.5-pro', // Using Pro model for better quality
+  selectedModel: 'gemini-1.5-flash', // Flash supports vision and is reliable
   systemPrompt: '',
   context: '',
   capturedScreenData: null,
@@ -212,12 +212,12 @@ async function callGeminiAPI(userMessage, imageData = null) {
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
 
-  // Map old model names to new ones and enforce Pro model for better quality
+  // Map old model names to new ones and select appropriate model
   const modelMapping = {
-    'gemini-pro': 'gemini-1.5-pro',
-    'gemini-1.0-pro': 'gemini-1.5-pro',
-    'gemini-1.5-flash': 'gemini-1.5-pro', // Upgrade flash to pro for better quality
-    'gemini-2.0-flash-exp': 'gemini-1.5-pro' // Use pro instead of experimental
+    'gemini-pro': 'gemini-1.5-flash',
+    'gemini-1.0-pro': 'gemini-1.5-flash',
+    'gemini-2.0-flash-exp': 'gemini-1.5-flash',
+    'gemini-1.5-pro': 'gemini-1.5-flash' // Pro not available in v1beta, use Flash
   };
 
   if (modelMapping[model]) {
@@ -226,12 +226,12 @@ async function callGeminiAPI(userMessage, imageData = null) {
     await window.chatboxAPI.setStoreValue('model', model);
   }
 
-  // Ensure we're using Pro model for vision tasks
-  if (imageData && !model.includes('pro')) {
-    model = 'gemini-1.5-pro';
+  // Ensure we're using Flash model for vision (proven to work)
+  if (imageData && model !== 'gemini-1.5-flash') {
+    model = 'gemini-1.5-flash';
   }
 
-  // Use v1beta for all models (supports vision)
+  // Use v1beta API version (supports vision and multimodal)
   const apiVersion = 'v1beta';
 
   // Build conversation context with specialized prompt for screen analysis
@@ -239,13 +239,16 @@ async function callGeminiAPI(userMessage, imageData = null) {
 
   // Add screen analysis context if image is provided
   if (imageData) {
-    systemContext += `\n\nYou are helping a user analyze content on their screen. `;
+    systemContext += `\n\nYou are an expert assistant analyzing content on the user's screen. `;
     systemContext += `The user has captured their screen and will ask you specific questions about it. `;
-    systemContext += `Focus on answering their specific question accurately and directly. `;
-    systemContext += `Do NOT describe the entire screen unless asked. `;
-    systemContext += `If they ask to solve a problem, provide step-by-step solution. `;
-    systemContext += `If they ask about specific content, focus only on that content. `;
-    systemContext += `Be precise, helpful, and task-oriented.`;
+    systemContext += `CRITICAL INSTRUCTIONS:`;
+    systemContext += `\n1. Focus ONLY on answering their specific question - ignore everything else on screen`;
+    systemContext += `\n2. Do NOT describe the entire screen unless explicitly asked`;
+    systemContext += `\n3. If asked to solve a problem: Provide detailed step-by-step solution with clear explanations`;
+    systemContext += `\n4. If asked about specific content: Focus exclusively on that content`;
+    systemContext += `\n5. For math/science problems: Show ALL working steps, formulas, and reasoning`;
+    systemContext += `\n6. Be precise, thorough, and task-oriented`;
+    systemContext += `\n7. If you see exam questions, help solve the SPECIFIC question they ask about`;
   }
 
   if (context) {
@@ -291,10 +294,10 @@ async function callGeminiAPI(userMessage, imageData = null) {
         parts: parts
       }],
       generationConfig: {
-        temperature: 0.9,
+        temperature: 0.7, // Lower temperature for more focused, accurate responses
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096, // Increased for detailed solutions
       }
     })
   });
