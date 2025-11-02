@@ -23,7 +23,30 @@ async function init() {
   setupRecording();
   setupSettings();
   setupEventListeners();
+  updateGreeting();
   checkApiKey();
+}
+
+// Update greeting based on time of day
+function updateGreeting() {
+  const greetingElement = document.getElementById('greeting-text');
+  if (!greetingElement) return;
+
+  const hour = new Date().getHours();
+  let greeting;
+
+  if (hour < 12) {
+    greeting = 'Good morning';
+  } else if (hour < 18) {
+    greeting = 'Good afternoon';
+  } else {
+    greeting = 'Good evening';
+  }
+
+  greetingElement.textContent = greeting;
+
+  // Update every minute
+  setTimeout(updateGreeting, 60000);
 }
 
 // Load settings from storage

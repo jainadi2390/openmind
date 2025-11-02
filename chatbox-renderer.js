@@ -14,6 +14,7 @@ const chatState = {
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
+const captureBtn = document.getElementById('capture-screen-btn');
 const closeBtn = document.getElementById('close-btn');
 const minimizeBtn = document.getElementById('minimize-btn');
 const typingIndicator = document.getElementById('typing-indicator');
@@ -107,6 +108,9 @@ function setupEventListeners() {
       }
     });
   });
+
+  // Screen capture
+  captureBtn.addEventListener('click', captureScreen);
 }
 
 // Send message
@@ -149,7 +153,7 @@ async function sendMessage() {
 }
 
 // Call Gemini API
-async function callGeminiAPI(userMessage) {
+async function callGeminiAPI(userMessage, imageData = null) {
   const apiKey = chatState.geminiApiKey;
   let model = chatState.selectedModel;
   const systemPrompt = chatState.systemPrompt;
@@ -168,14 +172,11 @@ async function callGeminiAPI(userMessage) {
     await window.chatboxAPI.setStoreValue('model', model);
   }
 
-  // Determine API version based on model
-  // Experimental models use v1beta, stable models can use v1 or v1beta
-  const apiVersion = model.includes('-exp') ? 'v1beta' : 'v1beta';
+  // Use flash or pro models for vision (they support multimodal)
+  // Experimental models also support vision
+  const apiVersion = 'v1beta';
 
   // Build conversation context
-  let conversationHistory = [];
-
-  // Add system context
   let systemContext = systemPrompt;
   if (context) {
     systemContext += `\n\nAdditional Context:\n${context}`;
@@ -195,6 +196,19 @@ async function callGeminiAPI(userMessage) {
 
   const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
 
+  // Build parts array for the request
+  const parts = [{ text: conversationText }];
+
+  // Add image if provided
+  if (imageData) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/png',
+        data: imageData
+      }
+    });
+  }
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -202,9 +216,7 @@ async function callGeminiAPI(userMessage) {
     },
     body: JSON.stringify({
       contents: [{
-        parts: [{
-          text: conversationText
-        }]
+        parts: parts
       }],
       generationConfig: {
         temperature: 0.9,
@@ -227,6 +239,70 @@ async function callGeminiAPI(userMessage) {
   }
 
   return data.candidates[0].content.parts[0].text;
+}
+
+// Capture screen and ask AI
+async function captureScreen() {
+  if (chatState.isWaiting) return;
+
+  if (!chatState.geminiApiKey) {
+    addSystemMessage('Please configure your Gemini API key in Settings first.');
+    return;
+  }
+
+  try {
+    // Get screen sources
+    const sources = await window.chatboxAPI.getScreenSources();
+
+    if (!sources || sources.length === 0) {
+      addSystemMessage('No screen sources available for capture.');
+      return;
+    }
+
+    // Use the first screen source (primary display)
+    const primaryScreen = sources[0];
+
+    // Get the thumbnail as a data URL
+    const thumbnailDataUrl = primaryScreen.thumbnail.toDataURL();
+
+    // Convert data URL to base64 (remove the data:image/png;base64, prefix)
+    const base64Image = thumbnailDataUrl.split(',')[1];
+
+    // Get user's question or use default
+    let question = chatInput.value.trim();
+    if (!question) {
+      question = "What do you see on this screen? Please describe what's visible and provide any relevant insights.";
+    }
+
+    // Clear input
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+
+    // Add user message with image indicator
+    addMessage('user', `📷 ${question}`);
+
+    // Show typing indicator
+    showTyping(true);
+    chatState.isWaiting = true;
+    sendBtn.disabled = true;
+    captureBtn.disabled = true;
+
+    // Call Gemini API with image
+    const response = await callGeminiAPI(question, base64Image);
+
+    // Add assistant response
+    addMessage('assistant', response);
+
+  } catch (error) {
+    console.error('Error capturing screen:', error);
+    addSystemMessage('Error capturing screen: ' + error.message);
+  } finally {
+    showTyping(false);
+    chatState.isWaiting = false;
+    sendBtn.disabled = false;
+    captureBtn.disabled = false;
+    chatInput.focus();
+  }
 }
 
 // Add message to chat
