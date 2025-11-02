@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenMind AI Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          <span>OpenMind</span>
+        </h1>
+        <p class="tagline">AI Meeting Assistant</p>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item active" data-view="assistant">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+          <span>Assistant</span>
+        </li>
+        <li class="nav-item" data-view="history">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>History</span>
+        </li>
+        <li class="nav-item" data-view="settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="transparency-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Transparent AI Tool</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Assistant View -->
+      <div id="assistant-view" class="view active">
+        <header class="view-header">
+          <div class="header-left">
+            <h2>AI Assistant</h2>
+            <span class="status-badge" id="status-badge">Ready</span>
+          </div>
+          <div class="header-right">
+            <button class="btn btn-icon" id="always-on-top-btn" title="Toggle Always on Top">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 3l14 9-14 9V3z"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="assistant-container">
+          <!-- Transcript Panel -->
+          <div class="panel transcript-panel">
+            <div class="panel-header">
+              <h3>Live Transcript</h3>
+              <button class="btn btn-sm btn-record" id="record-btn">
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                  <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                <span class="btn-text">Start Recording</span>
+              </button>
+            </div>
+            <div class="panel-content">
+              <div id="transcript-content" class="transcript-content">
+                <p class="empty-state">Click "Start Recording" to begin transcribing...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Response Panel -->
+          <div class="panel response-panel">
+            <div class="panel-header">
+              <h3>AI Suggestions</h3>
+              <div class="panel-actions">
+                <button class="btn btn-sm btn-icon" id="copy-response-btn" title="Copy Response">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+                <button class="btn btn-sm btn-icon" id="clear-response-btn" title="Clear">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="panel-content">
+              <div id="response-content" class="response-content">
+                <p class="empty-state">AI responses will appear here...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Context Input -->
+        <div class="context-section">
+          <label for="context-input">Context (Optional)</label>
+          <textarea
+            id="context-input"
+            class="context-input"
+            placeholder="Add context for better responses (e.g., your resume, meeting agenda, product details)..."
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- History View -->
+      <div id="history-view" class="view">
+        <header class="view-header">
+          <h2>Meeting History</h2>
+          <button class="btn btn-sm" id="clear-history-btn">Clear All</button>
+        </header>
+        <div class="history-container">
+          <div id="history-list" class="history-list">
+            <p class="empty-state">No meeting history yet...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settings-view" class="view">
+        <header class="view-header">
+          <h2>Settings</h2>
+        </header>
+        <div class="settings-container">
+          <div class="settings-section">
+            <h3>API Configuration</h3>
+            <div class="form-group">
+              <label for="gemini-api-key">Gemini API Key</label>
+              <div class="input-with-button">
+                <input
+                  type="password"
+                  id="gemini-api-key"
+                  placeholder="Enter your Gemini API key..."
+                  class="input-field"
+                />
+                <button class="btn btn-sm" id="toggle-api-key-visibility">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+              <p class="help-text">
+                Get your API key from
+                <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label for="model-select">Gemini Model</label>
+              <select id="model-select" class="select-field">
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast & Affordable)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most Capable)</option>
+                <option value="gemini-pro">Gemini Pro (Legacy)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary" id="save-api-key-btn">Save API Key</button>
+          </div>
+
+          <div class="settings-section">
+            <h3>Transcription</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="auto-transcribe-checkbox" checked />
+                <span>Auto-transcribe during recording</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="language-select">Language</label>
+              <select id="language-select" class="select-field">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="it-IT">Italian</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="ko-KR">Korean</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>AI Behavior</h3>
+            <div class="form-group">
+              <label for="system-prompt">System Prompt</label>
+              <textarea
+                id="system-prompt"
+                class="textarea-field"
+                rows="4"
+                placeholder="Customize how the AI responds..."
+              >You are a helpful AI assistant helping during professional meetings and conversations. Provide concise, accurate, and professional responses. Focus on answering questions clearly and providing relevant information based on the context provided.</textarea>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="auto-suggest-checkbox" checked />
+                <span>Automatically suggest responses</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Shortcuts</h3>
+            <div class="shortcut-list">
+              <div class="shortcut-item">
+                <span class="shortcut-label">Toggle Window</span>
+                <kbd>Ctrl+Shift+M</kbd>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-label">Start/Stop Recording</span>
+                <kbd>Ctrl+Shift+R</kbd>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-label">Compact Mode</span>
+                <kbd>Ctrl+K</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>About</h3>
+            <div class="about-content">
+              <p><strong>OpenMind AI Assistant</strong></p>
+              <p>Version 1.0.0</p>
+              <p class="about-description">
+                OpenMind is a transparent AI meeting assistant designed to help you be more productive
+                in meetings, calls, and interviews. Unlike deceptive tools, OpenMind is meant to be
+                disclosed to other participants and used ethically.
+              </p>
+              <div class="transparency-notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <p>
+                  <strong>Ethical Use Notice:</strong> This tool is designed for legitimate productivity
+                  purposes. Please disclose its use to meeting participants and respect privacy laws.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

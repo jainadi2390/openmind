@@ -1,0 +1,74 @@
+{
+  "name": "openmind-ai-assistant",
+  "version": "1.0.0",
+  "description": "OpenMind - Transparent AI Meeting Assistant with Gemini API",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "meeting",
+    "productivity",
+    "gemini",
+    "transcription"
+  ],
+  "author": "OpenMind Team",
+  "license": "MIT",
+  "build": {
+    "appId": "com.openmind.aiassistant",
+    "productName": "OpenMind AI Assistant",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "OpenMind requires microphone access to transcribe your conversations and provide AI assistance.",
+        "NSCameraUsageDescription": "OpenMind may access screen content to provide context-aware assistance."
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "files": [
+      "**/*",
+      "!assets/*.png"
+    ],
+    "extraResources": [
+      "assets/**"
+    ]
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.3",
+    "electron-builder": "^24.13.3"
+  }
+}
