@@ -436,6 +436,10 @@ async function getAISuggestion(text) {
  */
 async function callGeminiAPI(userMessage) {
   const apiKey = state.geminiApiKey;
+  if (!apiKey) {
+    throw new Error('API key is not configured. Please add your Gemini API key in Settings.');
+  }
+
   let model = state.selectedModel;
   const systemPrompt = state.systemPrompt || document.getElementById('system-prompt').value;
   const context = state.context || document.getElementById('context-input').value;
@@ -464,6 +468,8 @@ async function callGeminiAPI(userMessage) {
 
   // Use v1beta API version (required for these models)
   const apiVersion = 'v1beta';
+
+  console.log(`[Gemini API] Using model: ${model}, API version: ${apiVersion}`);
 
   // Build the prompt
   let fullPrompt = systemPrompt + '\n\n';
@@ -507,8 +513,15 @@ async function callGeminiAPI(userMessage) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Gemini API error');
+    let errorMessage = `Gemini API error (${response.status})`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || errorMessage;
+    } catch (e) {
+      // If JSON parsing fails, use the status text
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -517,7 +530,12 @@ async function callGeminiAPI(userMessage) {
     throw new Error('Invalid response from Gemini API');
   }
 
-  return data.candidates[0].content.parts[0].text;
+  const parts = data.candidates[0].content.parts;
+  if (!parts || parts.length === 0 || !parts[0].text) {
+    throw new Error('No text content in API response');
+  }
+
+  return parts[0].text;
 }
 
 function displayAIResponse(text) {

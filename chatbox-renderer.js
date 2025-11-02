@@ -62,15 +62,24 @@ async function loadSettings() {
     chatState.geminiApiKey = await window.chatboxAPI.getStoreValue('geminiApiKey');
     let model = await window.chatboxAPI.getStoreValue('model') || 'gemini-2.0-flash-exp';
 
-    // Map old model names to new ones
+    // Map old/incorrect model names to working v1beta models
     const modelMapping = {
-      'gemini-pro': 'gemini-1.5-flash',
-      'gemini-1.0-pro': 'gemini-1.5-flash'
+      'gemini-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.0-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+      'gemini-1.5-pro': 'gemini-1.5-pro-latest'
     };
 
+    // Apply mapping if needed
     if (modelMapping[model]) {
       model = modelMapping[model];
-      // Update stored model
+      await window.chatboxAPI.setStoreValue('model', model);
+    }
+
+    // Ensure we have a valid model (fallback to 2.0-flash-exp)
+    const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    if (!validModels.includes(model)) {
+      model = 'gemini-2.0-flash-exp';
       await window.chatboxAPI.setStoreValue('model', model);
     }
 
@@ -208,6 +217,10 @@ async function sendMessage() {
  */
 async function callGeminiAPI(userMessage, imageData = null) {
   const apiKey = chatState.geminiApiKey;
+  if (!apiKey) {
+    throw new Error('API key is not configured. Please add your Gemini API key in Settings.');
+  }
+
   let model = chatState.selectedModel;
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
@@ -236,6 +249,8 @@ async function callGeminiAPI(userMessage, imageData = null) {
 
   // Use v1beta API version (required for these models)
   const apiVersion = 'v1beta';
+
+  console.log(`[Gemini API] Using model: ${model}, API version: ${apiVersion}, Has image: ${!!imageData}`);
 
   // Build conversation context with specialized prompt for screen analysis
   let systemContext = systemPrompt;
@@ -306,8 +321,15 @@ async function callGeminiAPI(userMessage, imageData = null) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Gemini API error');
+    let errorMessage = `Gemini API error (${response.status})`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || errorMessage;
+    } catch (e) {
+      // If JSON parsing fails, use the status text
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -316,7 +338,12 @@ async function callGeminiAPI(userMessage, imageData = null) {
     throw new Error('Invalid response from Gemini API');
   }
 
-  return data.candidates[0].content.parts[0].text;
+  const parts = data.candidates[0].content.parts;
+  if (!parts || parts.length === 0 || !parts[0].text) {
+    throw new Error('No text content in API response');
+  }
+
+  return parts[0].text;
 }
 
 /**
