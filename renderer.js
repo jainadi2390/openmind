@@ -23,7 +23,30 @@ async function init() {
   setupRecording();
   setupSettings();
   setupEventListeners();
+  updateGreeting();
   checkApiKey();
+}
+
+// Update greeting based on time of day
+function updateGreeting() {
+  const greetingElement = document.getElementById('greeting-text');
+  if (!greetingElement) return;
+
+  const hour = new Date().getHours();
+  let greeting;
+
+  if (hour < 12) {
+    greeting = 'Good morning';
+  } else if (hour < 18) {
+    greeting = 'Good afternoon';
+  } else {
+    greeting = 'Good evening';
+  }
+
+  greetingElement.textContent = greeting;
+
+  // Update every minute
+  setTimeout(updateGreeting, 60000);
 }
 
 // Load settings from storage
@@ -250,21 +273,28 @@ function updateRecordButton() {
 }
 
 function updateStatusBadge(status) {
-  const badge = document.getElementById('status-badge');
-  badge.className = 'status-badge';
+  // Update both status badges (nav and view header)
+  const navBadge = document.getElementById('nav-status-badge');
+  const viewBadge = document.getElementById('view-status-badge');
 
-  switch (status) {
-    case 'recording':
-      badge.classList.add('recording');
-      badge.textContent = 'Recording';
-      break;
-    case 'ready':
-      badge.classList.add('ready');
-      badge.textContent = 'Ready';
-      break;
-    default:
-      badge.textContent = 'Ready';
-  }
+  const badges = [navBadge, viewBadge].filter(badge => badge !== null);
+
+  badges.forEach(badge => {
+    badge.className = 'status-badge';
+
+    switch (status) {
+      case 'recording':
+        badge.classList.add('recording');
+        badge.textContent = 'Recording';
+        break;
+      case 'ready':
+        badge.classList.add('ready');
+        badge.textContent = 'Ready';
+        break;
+      default:
+        badge.textContent = 'Ready';
+    }
+  });
 }
 
 function addTranscriptItem(text) {
