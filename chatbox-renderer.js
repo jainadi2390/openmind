@@ -344,6 +344,21 @@ async function callGeminiAPI(userMessage, imageData = null) {
     try {
       const error = await response.json();
       errorMessage = error.error?.message || errorMessage;
+
+      // Provide helpful error messages based on status code
+      if (response.status === 400) {
+        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+          errorMessage = '❌ Invalid API Key\n\nYour Gemini API key is not valid. Please check:\n\n1. The key is correct (no spaces or typos)\n2. The key is from Google AI Studio\n3. The API is enabled for your key\n\nGet your key from: https://makersuite.google.com/app/apikey';
+        }
+      } else if (response.status === 403) {
+        errorMessage = '❌ Access Denied\n\nYour API key does not have permission to use this model.\n\nPlease check:\n1. The API key is valid\n2. You have enabled the Generative Language API\n3. Your billing is set up (if required)';
+      } else if (response.status === 429) {
+        errorMessage = '⚠️ Rate Limit Exceeded\n\nYou have made too many requests.\n\nPlease wait a moment and try again.';
+      } else if (response.status === 500 || response.status === 503) {
+        errorMessage = '⚠️ Server Error\n\nGoogle\'s servers are experiencing issues.\n\nPlease try again in a few moments.';
+      }
+
+      console.error('[Gemini API Error]', response.status, ':', errorMessage);
     } catch (e) {
       // If JSON parsing fails, use the status text
       errorMessage = response.statusText || errorMessage;

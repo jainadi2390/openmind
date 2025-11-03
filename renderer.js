@@ -517,6 +517,21 @@ async function callGeminiAPI(userMessage) {
     try {
       const error = await response.json();
       errorMessage = error.error?.message || errorMessage;
+
+      // Provide helpful error messages based on status code
+      if (response.status === 400) {
+        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+          errorMessage = '❌ Invalid API Key\n\nYour Gemini API key is not valid. Please check:\n\n1. The key is correct (no spaces or typos)\n2. The key is from Google AI Studio\n3. The API is enabled for your key\n\nGet your key from: https://makersuite.google.com/app/apikey';
+        }
+      } else if (response.status === 403) {
+        errorMessage = '❌ Access Denied\n\nYour API key does not have permission to use this model.\n\nPlease check:\n1. The API key is valid\n2. You have enabled the Generative Language API\n3. Your billing is set up (if required)';
+      } else if (response.status === 429) {
+        errorMessage = '⚠️ Rate Limit Exceeded\n\nYou have made too many requests.\n\nPlease wait a moment and try again.';
+      } else if (response.status === 500 || response.status === 503) {
+        errorMessage = '⚠️ Server Error\n\nGoogle\'s servers are experiencing issues.\n\nPlease try again in a few moments.';
+      }
+
+      console.error('[Gemini API Error]', response.status, ':', errorMessage);
     } catch (e) {
       // If JSON parsing fails, use the status text
       errorMessage = response.statusText || errorMessage;
@@ -678,6 +693,36 @@ function setupSettings() {
   const toggleApiKeyBtn = document.getElementById('toggle-api-key-visibility');
   const clearHistoryBtn = document.getElementById('clear-history-btn');
 
+  // Auto-trim API key input to remove whitespace
+  apiKeyInput.addEventListener('input', () => {
+    // Remove all whitespace characters (spaces, tabs, newlines)
+    const trimmed = apiKeyInput.value.replace(/\s/g, '');
+    if (trimmed !== apiKeyInput.value) {
+      const cursorPos = apiKeyInput.selectionStart;
+      apiKeyInput.value = trimmed;
+      apiKeyInput.setSelectionRange(cursorPos, cursorPos);
+    }
+  });
+
+  // Auto-trim on paste
+  apiKeyInput.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const trimmed = pastedText.replace(/\s/g, '');
+
+    // Insert trimmed text at cursor position
+    const start = apiKeyInput.selectionStart;
+    const end = apiKeyInput.selectionEnd;
+    const currentValue = apiKeyInput.value;
+    apiKeyInput.value = currentValue.substring(0, start) + trimmed + currentValue.substring(end);
+
+    // Set cursor position after pasted text
+    const newPos = start + trimmed.length;
+    apiKeyInput.setSelectionRange(newPos, newPos);
+
+    console.log('[API Key] Pasted and trimmed:', trimmed.substring(0, 10) + '...');
+  });
+
   saveApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
     const model = modelSelect.value;
@@ -685,9 +730,23 @@ function setupSettings() {
     const context = contextInput.value;
     const language = languageSelect.value;
 
+    // Validate API key
     if (!apiKey) {
-      alert('Please enter a valid API key');
+      alert('❌ Please enter your Gemini API key.\n\nYou can get one from:\nhttps://makersuite.google.com/app/apikey');
       return;
+    }
+
+    // Basic format validation for Gemini API keys
+    if (apiKey.length < 30) {
+      alert('❌ API key seems too short.\n\nGemini API keys are typically 39 characters long.\n\nPlease check your key and try again.');
+      return;
+    }
+
+    if (!apiKey.startsWith('AIza')) {
+      const proceed = confirm('⚠️ Warning: This doesn\'t look like a typical Gemini API key.\n\nGemini API keys usually start with "AIza".\n\nDo you want to save it anyway?');
+      if (!proceed) {
+        return;
+      }
     }
 
     try {
@@ -706,10 +765,15 @@ function setupSettings() {
         state.recognition.lang = language;
       }
 
-      alert('Settings saved successfully!');
+      console.log('[Settings] API key saved successfully');
+      console.log('[Settings] Model:', model);
+      console.log('[Settings] API key length:', apiKey.length);
+      console.log('[Settings] API key starts with:', apiKey.substring(0, 6) + '...');
+
+      alert('✅ Settings saved successfully!\n\nYou can now use the AI features.');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+      alert('❌ Failed to save settings.\n\nError: ' + error.message);
     }
   });
 
