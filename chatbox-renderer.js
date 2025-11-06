@@ -85,8 +85,10 @@ async function loadSettings() {
     const modelMapping = {
       'gemini-pro': 'gemini-2.0-flash-exp',
       'gemini-1.0-pro': 'gemini-2.0-flash-exp',
-      'gemini-1.5-flash': 'gemini-1.5-flash-latest',
-      'gemini-1.5-pro': 'gemini-1.5-pro-latest'
+      'gemini-1.5-flash': 'gemini-2.0-flash-exp',
+      'gemini-1.5-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.5-flash-latest': 'gemini-2.0-flash-exp',
+      'gemini-1.5-pro-latest': 'gemini-2.0-flash-exp'
     };
 
     // Apply mapping if needed
@@ -95,8 +97,8 @@ async function loadSettings() {
       await window.chatboxAPI.setStoreValue('model', model);
     }
 
-    // Ensure we have a valid model (fallback to 2.0-flash-exp)
-    const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    // Ensure we have a valid Gemini 2.0 model (fallback to 2.0-flash-exp)
+    const validModels = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
     if (!validModels.includes(model)) {
       model = 'gemini-2.0-flash-exp';
       await window.chatboxAPI.setStoreValue('model', model);
@@ -104,18 +106,24 @@ async function loadSettings() {
 
     chatState.selectedModel = model;
     chatState.systemPrompt = await window.chatboxAPI.getStoreValue('systemPrompt') ||
-      `You are OpenMind, an AI assistant that analyzes and solves problems shown on screen or asked by the user.
+      `You are OpenMind, an expert mathematics and problem-solving AI assistant. You excel at solving math, statistics, probability, coding, and technical problems.
 
-GUIDELINES:
-- NEVER use meta-phrases like "let me help you" or "I can see that"
-- NEVER refer to "screenshot" or "image" - say "the screen" if needed
+MATH EXPERTISE - CRITICAL:
+- ALWAYS show step-by-step work for ALL math problems
+- ALWAYS double-check calculations before responding
+- For statistics: Show mean/median/mode calculations clearly
+- For probability: Define events, show formulas, calculate step-by-step
+- Use LaTeX for all math: $x^2$ inline, $$\frac{a}{b}$$ display
+- End with **FINAL ANSWER** in bold
+- Include verification/double-check section
+
+GENERAL GUIDELINES:
+- NEVER use meta-phrases like "let me help you"
+- NEVER refer to "screenshot" or "image" - say "the screen"
 - Be specific, accurate, and actionable
-- Use markdown formatting
-- For technical problems: START with solution code immediately, NO introductory text
 - For coding: Every line MUST have a comment on the following line
-- For math: Use LaTeX ($...$ inline, $$...$$ multiline), end with **FINAL ANSWER**
-- For unclear intent: Start with "I'm not sure what information you're looking for."
-- NEVER summarize what's on screen unless explicitly asked`;
+- For unclear intent: "I'm not sure what information you're looking for."
+- NEVER summarize screen unless explicitly asked`;
     chatState.context = await window.chatboxAPI.getStoreValue('context') || '';
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -255,12 +263,14 @@ async function callGeminiAPI(userMessage, imageData = null) {
   const systemPrompt = chatState.systemPrompt;
   const context = chatState.context;
 
-  // Map old/incorrect model names to working v1beta models
+  // Map all old model names to Gemini 2.0 models (removed 1.5 models)
   const modelMapping = {
     'gemini-pro': 'gemini-2.0-flash-exp',
     'gemini-1.0-pro': 'gemini-2.0-flash-exp',
-    'gemini-1.5-flash': 'gemini-1.5-flash-latest',
-    'gemini-1.5-pro': 'gemini-1.5-pro-latest'
+    'gemini-1.5-flash': 'gemini-2.0-flash-exp',
+    'gemini-1.5-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-latest': 'gemini-2.0-flash-exp',
+    'gemini-1.5-pro-latest': 'gemini-2.0-flash-exp'
   };
 
   // Apply mapping if needed
@@ -270,8 +280,8 @@ async function callGeminiAPI(userMessage, imageData = null) {
     await window.chatboxAPI.setStoreValue('model', model);
   }
 
-  // Ensure we have a valid model (fallback to 2.0-flash-exp)
-  const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+  // Ensure we have a valid Gemini 2.0 model (fallback to 2.0-flash-exp)
+  const validModels = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
   if (!validModels.includes(model)) {
     model = 'gemini-2.0-flash-exp';
     chatState.selectedModel = model;

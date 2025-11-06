@@ -90,22 +90,24 @@ async function loadSettings() {
     const context = await window.electronAPI.getStoreValue('context');
     const language = await window.electronAPI.getStoreValue('language') || 'en-US';
 
-    // Map old model names to working v1beta models
+    // Map all old model names to Gemini 2.0 models (removed 1.5 models)
     const modelMapping = {
       'gemini-pro': 'gemini-2.0-flash-exp',
       'gemini-1.0-pro': 'gemini-2.0-flash-exp',
-      'gemini-1.5-flash': 'gemini-1.5-flash-latest',
-      'gemini-1.5-pro': 'gemini-1.5-pro-latest'
+      'gemini-1.5-flash': 'gemini-2.0-flash-exp',
+      'gemini-1.5-pro': 'gemini-2.0-flash-exp',
+      'gemini-1.5-flash-latest': 'gemini-2.0-flash-exp',
+      'gemini-1.5-pro-latest': 'gemini-2.0-flash-exp'
     };
 
     if (modelMapping[model]) {
       model = modelMapping[model];
-      // Update stored model
+      // Update stored model to new 2.0 model
       await window.electronAPI.setStoreValue('model', model);
     }
 
-    // Ensure we have a valid model (fallback to 2.0-flash-exp)
-    const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    // Ensure we have a valid Gemini 2.0 model (fallback to 2.0-flash-exp)
+    const validModels = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
     if (!validModels.includes(model)) {
       model = 'gemini-2.0-flash-exp';
       await window.electronAPI.setStoreValue('model', model);
@@ -444,12 +446,14 @@ async function callGeminiAPI(userMessage) {
   const systemPrompt = state.systemPrompt || document.getElementById('system-prompt').value;
   const context = state.context || document.getElementById('context-input').value;
 
-  // Map old/incorrect model names to working v1beta models
+  // Map all old model names to Gemini 2.0 models (removed 1.5 models)
   const modelMapping = {
     'gemini-pro': 'gemini-2.0-flash-exp',
     'gemini-1.0-pro': 'gemini-2.0-flash-exp',
-    'gemini-1.5-flash': 'gemini-1.5-flash-latest',
-    'gemini-1.5-pro': 'gemini-1.5-pro-latest'
+    'gemini-1.5-flash': 'gemini-2.0-flash-exp',
+    'gemini-1.5-pro': 'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-latest': 'gemini-2.0-flash-exp',
+    'gemini-1.5-pro-latest': 'gemini-2.0-flash-exp'
   };
 
   // Apply mapping if needed
@@ -459,8 +463,8 @@ async function callGeminiAPI(userMessage) {
     await window.electronAPI.setStoreValue('model', model);
   }
 
-  // Ensure we have a valid model (fallback to 2.0-flash-exp)
-  const validModels = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+  // Ensure we have a valid Gemini 2.0 model (fallback to 2.0-flash-exp)
+  const validModels = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
   if (!validModels.includes(model)) {
     model = 'gemini-2.0-flash-exp';
     state.selectedModel = model;
