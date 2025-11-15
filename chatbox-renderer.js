@@ -295,7 +295,10 @@ async function callGeminiAPI(userMessage, imageData = null) {
   // Build conversation context with specialized prompt for screen analysis
   let systemContext = systemPrompt;
 
-  // RAG: Retrieve relevant knowledge base chunks if available
+  // RAG: TEMPORARILY DISABLED to prevent rate limit issues
+  // The RAG system makes additional embedding API calls which can trigger rate limits
+  // Re-enable this block once you have higher API quotas or want to use RAG features
+  /*
   try {
     const kbStats = await window.chatboxAPI.kbGetStats();
     if (kbStats && kbStats.documentCount > 0) {
@@ -331,6 +334,11 @@ async function callGeminiAPI(userMessage, imageData = null) {
     console.error('[RAG] Error checking knowledge base stats:', error);
     // Continue without RAG if there's an error - don't break the chat
   }
+  */
+
+  // NOTE: RAG retrieval is currently disabled to avoid rate limit issues
+  // Each query requires an embedding API call which doubles your API usage
+  // To re-enable: Remove the /* */ comment block above
 
   // Add screen analysis context if image is provided
   if (imageData) {
@@ -379,63 +387,119 @@ async function callGeminiAPI(userMessage, imageData = null) {
     });
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: requestParts
-      }],
-      generationConfig: {
-        temperature: 0.7, // Lower temperature for more focused, accurate responses
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 4096, // Increased for detailed solutions
-      }
-    })
-  });
-
-  if (!response.ok) {
-    let errorMessage = `Gemini API error (${response.status})`;
-    try {
-      const error = await response.json();
-      errorMessage = error.error?.message || errorMessage;
-
-      // Provide helpful error messages based on status code
-      if (response.status === 400) {
-        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
-          errorMessage = '❌ Invalid API Key\n\nYour Gemini API key is not valid. Please check:\n\n1. The key is correct (no spaces or typos)\n2. The key is from Google AI Studio\n3. The API is enabled for your key\n\nGet your key from: https://makersuite.google.com/app/apikey';
-        }
-      } else if (response.status === 403) {
-        errorMessage = '❌ Access Denied\n\nYour API key does not have permission to use this model.\n\nPlease check:\n1. The API key is valid\n2. You have enabled the Generative Language API\n3. Your billing is set up (if required)';
-      } else if (response.status === 429) {
-        errorMessage = '⚠️ Rate Limit Exceeded\n\nYou have made too many requests.\n\nPlease wait a moment and try again.';
-      } else if (response.status === 500 || response.status === 503) {
-        errorMessage = '⚠️ Server Error\n\nGoogle\'s servers are experiencing issues.\n\nPlease try again in a few moments.';
-      }
-
-      console.error('[Gemini API Error]', response.status, ':', errorMessage);
-    } catch (e) {
-      // If JSON parsing fails, use the status text
-      errorMessage = response.statusText || errorMessage;
+  const requestBody = {
+    contents: [{
+      parts: requestParts
+    }],
+    generationConfig: {
+      temperature: 0.7, // Lower temperature for more focused, accurate responses
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 4096, // Increased for detailed solutions
     }
-    throw new Error(errorMessage);
+  };
+
+  // Retry logic with exponential backoff for rate limits
+  const maxRetries = 4; // Allow more retries for main API
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Gemini API error (${response.status})`;
+        try {
+          const error = await response.json();
+          errorMessage = error.error?.message || errorMessage;
+
+          // Handle rate limit with retry
+          if (response.status === 429 && attempt < maxRetries) {
+            const delay = Math.min(2000 * Math.pow(2, attempt), 16000); // 2s, 4s, 8s, 16s
+            console.warn(`[Gemini API] Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Retry the request
+          }
+
+          // Provide helpful error messages based on status code
+          if (response.status === 400) {
+            if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+              errorMessage = '❌ Invalid API Key\n\nYour Gemini API key is not valid. Please check:\n\n1. The key is correct (no spaces or typos)\n2. The key is from Google AI Studio\n3. The API is enabled for your key\n\nGet your key from: https://makersuite.google.com/app/apikey';
+            }
+          } else if (response.status === 403) {
+            errorMessage = '❌ Access Denied\n\nYour API key does not have permission to use this model.\n\nPlease check:\n1. The API key is valid\n2. You have enabled the Generative Language API\n3. Your billing is set up (if required)';
+          } else if (response.status === 429) {
+            // This happens on last retry attempt
+            errorMessage = '⏳ Temporary Rate Limit\n\nThe AI service is experiencing high demand. Your message has been queued.\n\nTip: Wait 10-15 seconds between messages to avoid this issue.';
+          } else if (response.status === 500 || response.status === 503) {
+            // Retry on server errors
+            if (attempt < maxRetries) {
+              const delay = Math.min(2000 * Math.pow(2, attempt), 16000);
+              console.warn(`[Gemini API] Server error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            errorMessage = '⚠️ Server Error\n\nGoogle\'s servers are experiencing issues.\n\nPlease try again in a few moments.';
+          }
+
+          console.error('[Gemini API Error]', response.status, ':', errorMessage);
+        } catch (e) {
+          // If JSON parsing fails, use the status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        lastError = new Error(errorMessage);
+
+        // Don't retry on auth errors (400, 403)
+        if (response.status === 400 || response.status === 403) {
+          throw lastError;
+        }
+
+        // For other errors on last attempt, throw
+        if (attempt === maxRetries) {
+          throw lastError;
+        }
+
+        continue; // Try again
+      }
+
+      const data = await response.json();
+
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        throw new Error('Invalid response from Gemini API');
+      }
+
+      const parts = data.candidates[0].content.parts;
+      if (!parts || parts.length === 0 || !parts[0].text) {
+        throw new Error('No text content in API response');
+      }
+
+      return parts[0].text;
+    } catch (error) {
+      lastError = error;
+
+      // If it's a network error and not last attempt, retry
+      if (attempt < maxRetries && (error.message.includes('fetch') || error.message.includes('network'))) {
+        const delay = Math.min(2000 * Math.pow(2, attempt), 16000);
+        console.warn(`[Gemini API] Network error, retrying in ${delay}ms:`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // If it's the last attempt or a non-retryable error, throw
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+    }
   }
 
-  const data = await response.json();
-
-  if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-    throw new Error('Invalid response from Gemini API');
-  }
-
-  const parts = data.candidates[0].content.parts;
-  if (!parts || parts.length === 0 || !parts[0].text) {
-    throw new Error('No text content in API response');
-  }
-
-  return parts[0].text;
+  // Should never reach here, but just in case
+  throw lastError || new Error('Failed to get response from Gemini API');
 }
 
 /**
