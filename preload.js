@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setStoreValue: (key, value) => ipcRenderer.invoke('set-store-value', key, value),
   deleteStoreValue: (key) => ipcRenderer.invoke('delete-store-value', key),
 
+  // Knowledge Base
+  kbReadFile: (filePath) => ipcRenderer.invoke('kb-read-file', filePath),
+  kbAddDocument: (filename, content, apiKey) => ipcRenderer.invoke('kb-add-document', filename, content, apiKey),
+  kbRetrieve: (query, apiKey, topK) => ipcRenderer.invoke('kb-retrieve', query, apiKey, topK),
+  kbGetStats: () => ipcRenderer.invoke('kb-get-stats'),
+  kbClear: () => ipcRenderer.invoke('kb-clear'),
+  kbLoad: () => ipcRenderer.invoke('kb-load'),
+
   // Listeners
   onShowSettings: (callback) => ipcRenderer.on('show-settings', callback),
   onToggleCompactMode: (callback) => ipcRenderer.on('toggle-compact-mode', callback),

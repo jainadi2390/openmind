@@ -4,11 +4,15 @@
  * @module main
  */
 
-const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, desktopCapturer } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, desktopCapturer, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 const Store = require('electron-store');
+const { KnowledgeBase } = require('./knowledge-base');
 
 const store = new Store();
+const knowledgeBase = new KnowledgeBase();
+
 let mainWindow;
 let chatboxWindow;
 let tray;
@@ -163,6 +167,63 @@ function createWindow() {
       }));
     } catch (error) {
       console.error('Error getting screen sources:', error);
+      throw error;
+    }
+  });
+
+  // Knowledge Base IPC handlers
+  ipcMain.handle('kb-read-file', async (event, filePath) => {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const filename = path.basename(filePath);
+      return { filename, content };
+    } catch (error) {
+      console.error('Error reading file:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('kb-add-document', async (event, filename, content, apiKey) => {
+    try {
+      await knowledgeBase.addDocument(filename, content, apiKey);
+      // Save knowledge base to store
+      store.set('knowledgeBase', knowledgeBase.serialize());
+      return knowledgeBase.getStats();
+    } catch (error) {
+      console.error('Error adding document to knowledge base:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('kb-retrieve', async (event, query, apiKey, topK) => {
+    try {
+      return await knowledgeBase.retrieve(query, apiKey, topK);
+    } catch (error) {
+      console.error('Error retrieving from knowledge base:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('kb-get-stats', async () => {
+    return knowledgeBase.getStats();
+  });
+
+  ipcMain.handle('kb-clear', async () => {
+    knowledgeBase.clear();
+    store.delete('knowledgeBase');
+    return true;
+  });
+
+  ipcMain.handle('kb-load', async () => {
+    try {
+      const savedKB = store.get('knowledgeBase');
+      if (savedKB) {
+        knowledgeBase.deserialize(savedKB);
+        return knowledgeBase.getStats();
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading knowledge base:', error);
       throw error;
     }
   });

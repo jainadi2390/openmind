@@ -859,6 +859,147 @@ function setupSettings() {
       }
     });
   }
+
+  // Knowledge Base handlers
+  const uploadKnowledgeBtn = document.getElementById('upload-knowledge-btn');
+  const knowledgeFilesInput = document.getElementById('knowledge-files');
+  const clearKnowledgeBtn = document.getElementById('clear-knowledge-btn');
+  const knowledgeBaseStatus = document.getElementById('knowledge-base-status');
+  const knowledgeFilesList = document.getElementById('knowledge-files-list');
+  const knowledgeStats = document.getElementById('knowledge-stats');
+  const knowledgeDocuments = document.getElementById('knowledge-documents');
+
+  // Load existing knowledge base on startup
+  loadKnowledgeBase();
+
+  uploadKnowledgeBtn.addEventListener('click', () => {
+    knowledgeFilesInput.click();
+  });
+
+  knowledgeFilesInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const apiKey = state.geminiApiKey;
+    if (!apiKey) {
+      alert('❌ Please save your Gemini API key first before uploading documents.');
+      document.querySelector('.nav-item[data-view="settings"]').click();
+      return;
+    }
+
+    // Show processing indicator
+    uploadKnowledgeBtn.disabled = true;
+    uploadKnowledgeBtn.innerHTML = '<span>Processing...</span>';
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const file of files) {
+        try {
+          console.log(`[KB] Processing file: ${file.path}`);
+
+          // Read file content
+          const { filename, content } = await window.electronAPI.kbReadFile(file.path);
+
+          // Add to knowledge base
+          await window.electronAPI.kbAddDocument(filename, content, apiKey);
+          successCount++;
+
+          console.log(`[KB] Successfully added: ${filename}`);
+        } catch (error) {
+          console.error(`[KB] Error processing ${file.name}:`, error);
+          failCount++;
+        }
+      }
+
+      // Update UI
+      await updateKnowledgeBaseUI();
+
+      // Show result
+      if (failCount > 0) {
+        alert(`⚠️ Added ${successCount} document(s).\n${failCount} file(s) failed to process.`);
+      } else {
+        alert(`✅ Successfully added ${successCount} document(s) to knowledge base!`);
+      }
+
+    } catch (error) {
+      console.error('[KB] Error uploading files:', error);
+      alert('❌ Error uploading files: ' + error.message);
+    } finally {
+      // Reset button
+      uploadKnowledgeBtn.disabled = false;
+      uploadKnowledgeBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Choose Files
+      `;
+      // Clear file input
+      knowledgeFilesInput.value = '';
+    }
+  });
+
+  clearKnowledgeBtn.addEventListener('click', async () => {
+    if (!confirm('⚠️ Are you sure you want to clear the entire knowledge base?\n\nThis action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await window.electronAPI.kbClear();
+      await updateKnowledgeBaseUI();
+      alert('✅ Knowledge base cleared successfully!');
+    } catch (error) {
+      console.error('[KB] Error clearing knowledge base:', error);
+      alert('❌ Error clearing knowledge base: ' + error.message);
+    }
+  });
+
+  async function loadKnowledgeBase() {
+    try {
+      const stats = await window.electronAPI.kbLoad();
+      if (stats) {
+        await updateKnowledgeBaseUI();
+      }
+    } catch (error) {
+      console.error('[KB] Error loading knowledge base:', error);
+    }
+  }
+
+  async function updateKnowledgeBaseUI() {
+    try {
+      const stats = await window.electronAPI.kbGetStats();
+
+      if (stats.documentCount > 0) {
+        // Show status
+        knowledgeBaseStatus.style.display = 'block';
+        knowledgeFilesList.style.display = 'block';
+        clearKnowledgeBtn.style.display = 'block';
+
+        // Update stats
+        knowledgeStats.textContent = `${stats.documentCount} document(s) • ${stats.chunkCount} chunks indexed`;
+
+        // Update documents list
+        knowledgeDocuments.innerHTML = stats.documents.map(doc => `
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+            <div style="font-weight: 500; font-size: 13px;">${doc.filename}</div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              ${doc.chunkCount} chunks • Added ${new Date(doc.addedAt).toLocaleDateString()}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        // Hide status
+        knowledgeBaseStatus.style.display = 'none';
+        knowledgeFilesList.style.display = 'none';
+        clearKnowledgeBtn.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('[KB] Error updating UI:', error);
+    }
+  }
 }
 
 // Event Listeners

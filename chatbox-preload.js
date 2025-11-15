@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('chatboxAPI', {
   // Screen capture - request from main process via IPC
   getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
 
+  // Knowledge Base
+  kbRetrieve: (query, apiKey, topK) => ipcRenderer.invoke('kb-retrieve', query, apiKey, topK),
+  kbGetStats: () => ipcRenderer.invoke('kb-get-stats'),
+
   // Remove listeners
   removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback)
 });

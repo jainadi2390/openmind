@@ -212,6 +212,55 @@
           </div>
 
           <div class="settings-section">
+            <h3>Knowledge Base (RAG)</h3>
+            <p class="help-text" style="margin-bottom: 12px;">
+              Upload documents (.txt, .pdf, .docx) to create a custom knowledge base. The AI will use this information to answer your questions with domain-specific knowledge.
+            </p>
+
+            <div class="form-group">
+              <label for="knowledge-files">Upload Documents</label>
+              <input
+                type="file"
+                id="knowledge-files"
+                accept=".txt,.pdf,.docx,.md"
+                multiple
+                style="display: none;"
+              />
+              <button class="btn btn-secondary" id="upload-knowledge-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Choose Files
+              </button>
+            </div>
+
+            <div class="form-group" id="knowledge-base-status" style="display: none;">
+              <div style="background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2" style="width: 20px; height: 20px;">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                  <strong style="color: #667eea;">Knowledge Base Loaded</strong>
+                </div>
+                <div id="knowledge-stats" style="font-size: 13px; color: var(--text-secondary);"></div>
+              </div>
+            </div>
+
+            <div class="form-group" id="knowledge-files-list" style="display: none;">
+              <label>Uploaded Documents</label>
+              <div id="knowledge-documents" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+
+            <div class="form-group">
+              <button class="btn btn-danger" id="clear-knowledge-btn" style="display: none;">
+                Clear Knowledge Base
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
             <h3>AI Behavior</h3>
             <div class="form-group">
               <label for="system-prompt">System Prompt</label>

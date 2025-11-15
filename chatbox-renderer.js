@@ -295,6 +295,37 @@ async function callGeminiAPI(userMessage, imageData = null) {
   // Build conversation context with specialized prompt for screen analysis
   let systemContext = systemPrompt;
 
+  // RAG: Retrieve relevant knowledge base chunks if available
+  try {
+    const kbStats = await window.chatboxAPI.kbGetStats();
+    if (kbStats && kbStats.documentCount > 0) {
+      console.log(`[RAG] Knowledge base available: ${kbStats.documentCount} documents, ${kbStats.chunkCount} chunks`);
+
+      // Retrieve top 3 most relevant chunks for the user's query
+      const relevantChunks = await window.chatboxAPI.kbRetrieve(userMessage, apiKey, 3);
+
+      if (relevantChunks && relevantChunks.length > 0) {
+        console.log(`[RAG] Retrieved ${relevantChunks.length} relevant chunks`);
+
+        // Inject knowledge base context into system prompt
+        systemContext += `\n\n=== KNOWLEDGE BASE CONTEXT ===\n`;
+        systemContext += `The following information has been retrieved from your uploaded knowledge base and is relevant to the user's question:\n\n`;
+
+        relevantChunks.forEach((chunk, index) => {
+          systemContext += `[Source ${index + 1}: ${chunk.filename}] (Relevance: ${(chunk.similarity * 100).toFixed(1)}%)\n`;
+          systemContext += `${chunk.text}\n\n`;
+        });
+
+        systemContext += `=== END KNOWLEDGE BASE CONTEXT ===\n`;
+        systemContext += `\nIMPORTANT: Use the above knowledge base information to answer the user's question accurately. `;
+        systemContext += `Cite the source files when relevant. If the knowledge base doesn't contain the answer, acknowledge this.`;
+      }
+    }
+  } catch (error) {
+    console.error('[RAG] Error retrieving from knowledge base:', error);
+    // Continue without RAG if there's an error - don't break the chat
+  }
+
   // Add screen analysis context if image is provided
   if (imageData) {
     systemContext += `\n\nYou are an expert assistant analyzing content on the user's screen. `;

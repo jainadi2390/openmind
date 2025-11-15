@@ -1,0 +1,39 @@
+PROBABILITY THEORY TEST DOCUMENT
+
+Black and White Balls Problem:
+If you have a box containing 4 black balls and 6 white balls (total 10 balls), the probability of drawing a white ball is calculated as follows:
+
+P(White) = Number of white balls / Total number of balls
+P(White) = 6/10 = 0.6 or 60%
+
+P(Black) = Number of black balls / Total number of balls
+P(Black) = 4/10 = 0.4 or 40%
+
+Important Notes:
+- Total balls must equal the sum of all colored balls
+- Probability must be between 0 and 1
+- All probabilities must sum to 1
+
+STATISTICS FORMULAS
+
+Mean (Average):
+Mean = Sum of all values / Number of values
+
+Median:
+The middle value when data is sorted
+- For odd number of values: middle value
+- For even number of values: average of two middle values
+
+Mode:
+The value that appears most frequently in the dataset
+
+ADVANCED PROBABILITY
+
+Conditional Probability:
+P(A|B) = P(A and B) / P(B)
+
+Independent Events:
+P(A and B) = P(A) × P(B)
+
+Mutually Exclusive Events:
+P(A or B) = P(A) + P(B)
