@@ -18,6 +18,7 @@ class KnowledgeBase {
     this.chunks = [];
     this.chunkSize = 500; // characters per chunk
     this.chunkOverlap = 100; // overlap between chunks
+    this.rateLimitCooldownUntil = null; // Timestamp until which RAG is disabled due to rate limits
   }
 
   /**
@@ -33,9 +34,15 @@ class KnowledgeBase {
     // Chunk the document
     const documentChunks = this.chunkText(content);
 
-    // Generate embeddings for each chunk
+    // Generate embeddings for each chunk with small delays to avoid rate limits
     for (let i = 0; i < documentChunks.length; i++) {
       const chunk = documentChunks[i];
+
+      // Add small delay between chunks to avoid rate limits (except for first chunk)
+      if (i > 0) {
+        await this.sleep(500); // 500ms delay between chunks
+      }
+
       const embedding = await this.generateEmbedding(chunk, apiKey);
 
       this.chunks.push({
@@ -44,6 +51,8 @@ class KnowledgeBase {
         text: chunk,
         embedding
       });
+
+      console.log(`[KB] Processed chunk ${i + 1}/${documentChunks.length}`);
     }
 
     // Store document metadata
@@ -77,36 +86,68 @@ class KnowledgeBase {
   }
 
   /**
-   * Generate embedding using Gemini API
+   * Generate embedding using Gemini API with retry logic
    * @param {string} text - Text to embed
    * @param {string} apiKey - Gemini API key
+   * @param {number} maxRetries - Maximum retry attempts
    * @returns {Promise<number[]>} Embedding vector
    */
-  async generateEmbedding(text, apiKey) {
+  async generateEmbedding(text, apiKey, maxRetries = 3) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'models/text-embedding-004',
-        content: {
-          parts: [{
-            text: text
-          }]
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'models/text-embedding-004',
+            content: {
+              parts: [{
+                text: text
+              }]
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+
+          // Handle rate limit errors with exponential backoff
+          if (response.status === 429 && attempt < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10 seconds
+            console.warn(`[KB] Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+            await this.sleep(delay);
+            continue;
+          }
+
+          throw new Error(`Embedding API error (${response.status}): ${error.error?.message || 'Unknown error'}`);
         }
-      })
-    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Embedding API error: ${error.error?.message || 'Unknown error'}`);
+        const data = await response.json();
+        return data.embedding.values;
+      } catch (error) {
+        // If it's the last attempt or not a rate limit error, throw
+        if (attempt === maxRetries || error.message.includes('fetch')) {
+          throw error;
+        }
+
+        // Otherwise retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        console.warn(`[KB] Error generating embedding, retrying in ${delay}ms:`, error.message);
+        await this.sleep(delay);
+      }
     }
+  }
 
-    const data = await response.json();
-    return data.embedding.values;
+  /**
+   * Sleep utility for delays
+   * @param {number} ms - Milliseconds to sleep
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -145,30 +186,49 @@ class KnowledgeBase {
       return [];
     }
 
+    // Check if we're in cooldown period due to rate limits
+    if (this.rateLimitCooldownUntil && Date.now() < this.rateLimitCooldownUntil) {
+      const remainingSeconds = Math.ceil((this.rateLimitCooldownUntil - Date.now()) / 1000);
+      console.warn(`[KB] RAG in cooldown mode for ${remainingSeconds}s due to rate limits`);
+      return []; // Return empty results during cooldown
+    }
+
     console.log(`[KB] Retrieving for query: ${query.substring(0, 50)}...`);
 
-    // Generate embedding for query
-    const queryEmbedding = await this.generateEmbedding(query, apiKey);
+    try {
+      // Generate embedding for query (use 1 retry for fast failure during chat)
+      const queryEmbedding = await this.generateEmbedding(query, apiKey, 1);
 
-    // Calculate similarity with all chunks
-    const similarities = this.chunks.map((chunk, index) => ({
-      index,
-      chunk,
-      similarity: this.cosineSimilarity(queryEmbedding, chunk.embedding)
-    }));
+      // Clear cooldown if successful
+      this.rateLimitCooldownUntil = null;
 
-    // Sort by similarity and get top K
-    similarities.sort((a, b) => b.similarity - a.similarity);
-    const topChunks = similarities.slice(0, topK);
+      // Calculate similarity with all chunks
+      const similarities = this.chunks.map((chunk, index) => ({
+        index,
+        chunk,
+        similarity: this.cosineSimilarity(queryEmbedding, chunk.embedding)
+      }));
 
-    console.log(`[KB] Top ${topK} chunks retrieved with similarities:`,
-      topChunks.map(c => c.similarity.toFixed(3)));
+      // Sort by similarity and get top K
+      similarities.sort((a, b) => b.similarity - a.similarity);
+      const topChunks = similarities.slice(0, topK);
 
-    return topChunks.map(item => ({
-      text: item.chunk.text,
-      filename: item.chunk.filename,
-      similarity: item.similarity
-    }));
+      console.log(`[KB] Top ${topK} chunks retrieved with similarities:`,
+        topChunks.map(c => c.similarity.toFixed(3)));
+
+      return topChunks.map(item => ({
+        text: item.chunk.text,
+        filename: item.chunk.filename,
+        similarity: item.similarity
+      }));
+    } catch (error) {
+      // If rate limit error, enable cooldown for 60 seconds
+      if (error.message.includes('429') || error.message.includes('Rate limit')) {
+        this.rateLimitCooldownUntil = Date.now() + 60000; // 60 seconds cooldown
+        console.warn('[KB] Rate limit hit, enabling 60s cooldown for RAG retrieval');
+      }
+      throw error; // Re-throw to be caught by chatbox handler
+    }
   }
 
   /**

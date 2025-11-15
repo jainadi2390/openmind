@@ -302,27 +302,33 @@ async function callGeminiAPI(userMessage, imageData = null) {
       console.log(`[RAG] Knowledge base available: ${kbStats.documentCount} documents, ${kbStats.chunkCount} chunks`);
 
       // Retrieve top 3 most relevant chunks for the user's query
-      const relevantChunks = await window.chatboxAPI.kbRetrieve(userMessage, apiKey, 3);
+      try {
+        const relevantChunks = await window.chatboxAPI.kbRetrieve(userMessage, apiKey, 3);
 
-      if (relevantChunks && relevantChunks.length > 0) {
-        console.log(`[RAG] Retrieved ${relevantChunks.length} relevant chunks`);
+        if (relevantChunks && relevantChunks.length > 0) {
+          console.log(`[RAG] Retrieved ${relevantChunks.length} relevant chunks`);
 
-        // Inject knowledge base context into system prompt
-        systemContext += `\n\n=== KNOWLEDGE BASE CONTEXT ===\n`;
-        systemContext += `The following information has been retrieved from your uploaded knowledge base and is relevant to the user's question:\n\n`;
+          // Inject knowledge base context into system prompt
+          systemContext += `\n\n=== KNOWLEDGE BASE CONTEXT ===\n`;
+          systemContext += `The following information has been retrieved from your uploaded knowledge base and is relevant to the user's question:\n\n`;
 
-        relevantChunks.forEach((chunk, index) => {
-          systemContext += `[Source ${index + 1}: ${chunk.filename}] (Relevance: ${(chunk.similarity * 100).toFixed(1)}%)\n`;
-          systemContext += `${chunk.text}\n\n`;
-        });
+          relevantChunks.forEach((chunk, index) => {
+            systemContext += `[Source ${index + 1}: ${chunk.filename}] (Relevance: ${(chunk.similarity * 100).toFixed(1)}%)\n`;
+            systemContext += `${chunk.text}\n\n`;
+          });
 
-        systemContext += `=== END KNOWLEDGE BASE CONTEXT ===\n`;
-        systemContext += `\nIMPORTANT: Use the above knowledge base information to answer the user's question accurately. `;
-        systemContext += `Cite the source files when relevant. If the knowledge base doesn't contain the answer, acknowledge this.`;
+          systemContext += `=== END KNOWLEDGE BASE CONTEXT ===\n`;
+          systemContext += `\nIMPORTANT: Use the above knowledge base information to answer the user's question accurately. `;
+          systemContext += `Cite the source files when relevant. If the knowledge base doesn't contain the answer, acknowledge this.`;
+        }
+      } catch (retrievalError) {
+        // If RAG retrieval fails (e.g., rate limit on embedding API), just skip it
+        console.warn('[RAG] Failed to retrieve from knowledge base, continuing without RAG:', retrievalError.message);
+        // Don't throw - just continue with regular chat without knowledge base
       }
     }
   } catch (error) {
-    console.error('[RAG] Error retrieving from knowledge base:', error);
+    console.error('[RAG] Error checking knowledge base stats:', error);
     // Continue without RAG if there's an error - don't break the chat
   }
 
